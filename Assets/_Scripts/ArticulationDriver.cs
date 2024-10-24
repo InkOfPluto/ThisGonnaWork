@@ -27,8 +27,8 @@ public class ArticulationDriver : MonoBehaviour
     public Transform driverHandRoot;
     public Vector3 driverHandOffset;
     public Vector3 rotataionalOffset;
-    public CapsuleCollider[] _capsuleColliders;
-    public BoxCollider[] _palmColliders;
+    public MeshCollider[] _meshColliders;
+    public MeshCollider[] _palmColliders;
     public TMP_Text infoText;
 
     ArticulationBody thisArticulation; // Root-Parent articulation body 
@@ -93,11 +93,11 @@ public class ArticulationDriver : MonoBehaviour
         // *******************************************************************************************
 
         #region Stabilize ArticulationBody / Prevent Random Jittering
-        foreach (BoxCollider collider in _palmColliders)
+        foreach (MeshCollider collider in _palmColliders)
         {
             collider.enabled = false;
         }
-        foreach (CapsuleCollider collider in _capsuleColliders)
+        foreach (MeshCollider collider in _meshColliders)
         {
             collider.enabled = false;
         }
@@ -107,11 +107,11 @@ public class ArticulationDriver : MonoBehaviour
             articulationBods[a].velocity = Vector3.zero;
             articulationBods[a].angularVelocity = Vector3.zero;
         }
-        foreach (BoxCollider collider in _palmColliders)
+        foreach (MeshCollider collider in _palmColliders)
         {
             collider.enabled = true;
         }
-        foreach (CapsuleCollider collider in _capsuleColliders)
+        foreach (MeshCollider collider in _meshColliders)
         {
             collider.enabled = true;
         }
@@ -254,13 +254,13 @@ public class ArticulationDriver : MonoBehaviour
             // *******************************************************************************************
 
             #region Settings for Articulation Body 
-            foreach (BoxCollider collider in _palmColliders)
+            foreach (MeshCollider collider in _palmColliders)
             {
                 collider.enabled = false;
                 yield return null;
             }
 
-            foreach (CapsuleCollider collider in _capsuleColliders)
+            foreach (MeshCollider collider in _meshColliders)
             {
                 collider.enabled = false;
                 yield return null;
@@ -272,12 +272,12 @@ public class ArticulationDriver : MonoBehaviour
                 articulationBods[a].angularVelocity = Vector3.zero;
                 yield return null;
             }
-            foreach (BoxCollider collider in _palmColliders)
+            foreach (MeshCollider collider in _palmColliders)
             {
                 collider.enabled = true;
                 yield return null;
             }
-            foreach (CapsuleCollider collider in _capsuleColliders)
+            foreach (MeshCollider collider in _meshColliders)
             {
                 collider.enabled = true;
                 yield return null;
