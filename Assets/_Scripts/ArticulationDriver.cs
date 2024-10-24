@@ -1,3 +1,16 @@
+/*
+ 
+    This is the main script responsible for driving the articulation bodies of the target manipulator/hand/arm etc. 
+    
+    Author: Diar Abdlakrim
+    Email: contact@obirobotics.com
+    Date: 21st December 2019
+    
+    This software is propriatery and may not be used, copied, modified, or distributed 
+    for any commercial purpose without explicit written permission Obi Robotics Ltd (R) 2024.
+ */
+
+
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
