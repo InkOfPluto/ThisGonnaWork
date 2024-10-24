@@ -198,7 +198,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: e1e222f394da1b4468d2204727016281, type: 2}
+  - {fileID: 2100000, guid: 9f9c4f2e30e165d42b887c13a5a78cdc, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1141,7 +1141,7 @@ Transform:
   m_GameObject: {fileID: 235636255}
   serializedVersion: 2
   m_LocalRotation: {x: -0.00000037449834, y: 0.0000016852835, z: 0.000005149472, w: 1}
-  m_LocalPosition: {x: 0.162, y: 0.721, z: 0.503}
+  m_LocalPosition: {x: 0.539, y: 0.721, z: 0.503}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1733,7 +1733,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 246c23a1d0dab2b468bd3d13406ce6c3, type: 2}
+  - {fileID: 2100000, guid: e1e222f394da1b4468d2204727016281, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1836,7 +1836,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 246c23a1d0dab2b468bd3d13406ce6c3, type: 2}
+  - {fileID: 2100000, guid: e1e222f394da1b4468d2204727016281, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -1918,17 +1918,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e0eec6d55aba3d74a86d5656a486a01f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  handedness: 1
   _palmBody: {fileID: 1359889516}
   driverHand: {fileID: 1223482963}
-  driverJoints:
-  - {fileID: 235636260}
-  - {fileID: 555880039}
-  - {fileID: 1421018743}
-  - {fileID: 971291469}
-  - {fileID: 1607236310}
-  - {fileID: 473833623}
-  - {fileID: 803812597}
   articulationBods:
   - {fileID: 1293952060}
   - {fileID: 1976245896}
@@ -1937,7 +1928,6 @@ MonoBehaviour:
   - {fileID: 1594053935}
   - {fileID: 161584528}
   - {fileID: 1359889516}
-  driverHandRoot: {fileID: 1223482963}
   driverHandOffset: {x: 0, y: 0, z: 0}
   rotataionalOffset: {x: 0, y: 0, z: 0}
   _meshColliders:
@@ -1949,7 +1939,6 @@ MonoBehaviour:
   - {fileID: 161584529}
   - {fileID: 1359889517}
   _palmColliders: []
-  infoText: {fileID: 327985894}
   angle: 0
 --- !u!4 &683814531
 Transform:
@@ -2022,7 +2011,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 246c23a1d0dab2b468bd3d13406ce6c3, type: 2}
+  - {fileID: 2100000, guid: e1e222f394da1b4468d2204727016281, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -2231,7 +2220,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 246c23a1d0dab2b468bd3d13406ce6c3, type: 2}
+  - {fileID: 2100000, guid: e1e222f394da1b4468d2204727016281, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -2706,7 +2695,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: e1e222f394da1b4468d2204727016281, type: 2}
+  - {fileID: 2100000, guid: 9f9c4f2e30e165d42b887c13a5a78cdc, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -2873,7 +2862,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: e1e222f394da1b4468d2204727016281, type: 2}
+  - {fileID: 2100000, guid: 9f9c4f2e30e165d42b887c13a5a78cdc, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -2971,7 +2960,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 246c23a1d0dab2b468bd3d13406ce6c3, type: 2}
+  - {fileID: 2100000, guid: e1e222f394da1b4468d2204727016281, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -3061,7 +3050,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: e1e222f394da1b4468d2204727016281, type: 2}
+  - {fileID: 2100000, guid: 9f9c4f2e30e165d42b887c13a5a78cdc, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -3193,7 +3182,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 246c23a1d0dab2b468bd3d13406ce6c3, type: 2}
+  - {fileID: 2100000, guid: e1e222f394da1b4468d2204727016281, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -3532,7 +3521,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 246c23a1d0dab2b468bd3d13406ce6c3, type: 2}
+  - {fileID: 2100000, guid: e1e222f394da1b4468d2204727016281, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -3871,7 +3860,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: e1e222f394da1b4468d2204727016281, type: 2}
+  - {fileID: 2100000, guid: 9f9c4f2e30e165d42b887c13a5a78cdc, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -4062,17 +4051,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e0eec6d55aba3d74a86d5656a486a01f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  handedness: 1
-  _palmBody: {fileID: 451412700}
+  _palmBody: {fileID: 8023968050733140115}
   driverHand: {fileID: 376685726}
-  driverJoints:
-  - {fileID: 555880039}
-  - {fileID: 1421018743}
-  - {fileID: 971291469}
-  - {fileID: 1607236310}
-  - {fileID: 473833623}
-  - {fileID: 803812597}
-  - {fileID: 1783309803}
   articulationBods:
   - {fileID: 8191425596154807804}
   - {fileID: 6298126353808310270}
@@ -4080,8 +4060,6 @@ MonoBehaviour:
   - {fileID: 6728245622241436736}
   - {fileID: 8736913351512715196}
   - {fileID: 8023968050733140115}
-  - {fileID: 451412700}
-  driverHandRoot: {fileID: 376685726}
   driverHandOffset: {x: 0, y: 0, z: 0}
   rotataionalOffset: {x: 0, y: 0, z: 0}
   _meshColliders:
@@ -4090,10 +4068,9 @@ MonoBehaviour:
   - {fileID: 8431991981575854571}
   - {fileID: 6728245622241436735}
   - {fileID: 8736913351512715195}
-  - {fileID: 451412701}
+  - {fileID: 8023968050733140114}
   _palmColliders:
   - {fileID: 451412701}
-  infoText: {fileID: 327985894}
   angle: 0
 --- !u!1 &1825864369 stripped
 GameObject:
