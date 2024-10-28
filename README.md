@@ -4,24 +4,17 @@ This Unity project (v2022.3.13f1) is indented for scientific work on human to ro
 The heart of the code is based on Unity's ArticulationBodies, driven by NVIDIA's PhysX physics engine for accurate robotic simulation and hand/gripper object interactions during grasping. 
 
 **Pre-requisites**
-
-Hardware:  
-..* Windows-10 PC with a Meta Desktop compatible GPU, which excludes the RTX3050 and the RTX3050Ti
-..* Meta Quest headsets (versions 1,2,3 or Pro are all compatible) with hand-tracking enabled 
-..* Meta Link cable
-
 <dl>
-  <dt>Definition list</dt>
-  <dd>Is something people use sometimes.</dd>
+  <dt>Hardware:</dt>
+  <dd> Windows-10 PC with a Meta Desktop compatible GPU, which excludes the RTX3050 and the RTX3050Ti</dd>
+  <dd> Meta Quest headsets (versions 1,2,3 or Pro are all compatible) with hand-tracking enabled </dd>
+  <dd> Meta Link cable </dd>
 
-  <dt>Markdown in HTML</dt>
-  <dd>Does *not* work **very** well. Use HTML <em>tags</em>.</dd>
+  <dt>Software:</dt>
+  <dd> Meta Desktop app </dd>
+  <dd> Unity v2022.3.13f1 </dd>
+  <dd> Unity's OpenXR package for VR and hand-tracking access for Meta devices </dd>
 </dl>
-
-Software:
-Meta Desktop app 
-Unity v2022.3.13f1 
-Unity's OpenXR package for VR and hand-tracking access for Meta devices 
 
 Optional (untested alternatives):
 Steam and SteamVR
