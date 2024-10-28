@@ -5,10 +5,10 @@ The heart of the code is based on Unity's ArticulationBodies, driven by NVIDIA's
 
 **Pre-requisites**
 
-Hardware: \n
-[X] Windows-10 PC with a Meta Desktop compatible GPU, which excludes the RTX3050 and the RTX3050Ti
-[X] Meta Quest headsets (versions 1,2,3 or Pro are all compatible) with hand-tracking enabled 
-[X] Meta Link cable
+Hardware:
+  [X] Windows-10 PC with a Meta Desktop compatible GPU, which excludes the RTX3050 and the RTX3050Ti
+  [X] Meta Quest headsets (versions 1,2,3 or Pro are all compatible) with hand-tracking enabled 
+  [X] Meta Link cable
 
 Software:
 Meta Desktop app 
