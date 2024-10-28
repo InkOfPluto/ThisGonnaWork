@@ -3,8 +3,9 @@
 This Unity project (v2022.3.13f1) is indented for scientific work on human to robot natural motion tranfer in unstructured and unstable environment, in which robots perform object manipulation tasks. 
 The heart of the code is based on Unity's ArticulationBodies, driven by NVIDIA's PhysX physics engine for accurate robotic simulation and hand/gripper object interactions during grasping. 
 
-Pre-requisites: 
-Hardware: 
+**Pre-requisites**
+
+Hardware: \n
 [X] Windows-10 PC with a Meta Desktop compatible GPU, which excludes the RTX3050 and the RTX3050Ti
 [X] Meta Quest headsets (versions 1,2,3 or Pro are all compatible) with hand-tracking enabled 
 [X] Meta Link cable
