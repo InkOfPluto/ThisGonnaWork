@@ -25,7 +25,7 @@ The heart of the code is based on Unity's ArticulationBodies, driven by NVIDIA's
 
 
 
-![alt text](h2b_main_screen.png)
+![alt text](h2b_motionbridge.gif)
 
 This image shows two KUKA iiwa-7 arms. The arm on the right (physics-arm) is the one we are mainly using for this project. The arm on the left (inverse kinematics arm (IK-arm)) is for comparison purposes only.
 
