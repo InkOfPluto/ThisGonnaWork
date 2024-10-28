@@ -14,11 +14,13 @@ The heart of the code is based on Unity's ArticulationBodies, driven by NVIDIA's
   <dd> Meta Desktop app </dd>
   <dd> Unity v2022.3.13f1 </dd>
   <dd> Unity's OpenXR package for VR and hand-tracking access for Meta devices </dd>
+
+  <dt>Optional (untested alternatives):</dt>
+  <dd> Steam and SteamVR </dd>
+  <dd> Leap Motion hand-tracking </dd> 
 </dl>
 
-Optional (untested alternatives):
-Steam and SteamVR
-Leap Motion hand-tracking 
+
 
 
 ![alt text](h2b_main_screen.png)
