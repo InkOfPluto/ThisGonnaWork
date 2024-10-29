@@ -82,7 +82,7 @@ public class ArticulationDriver : MonoBehaviour
           Mathf.DeltaAngle(0, rotation.eulerAngles.z)) / Time.fixedDeltaTime) * Mathf.Deg2Rad, 45f * 1f);
 
         _palmBody.angularVelocity = angularVelocity;
-        _palmBody.angularDamping = 50f;
+        _palmBody.angularDamping = 0.5f;
         #endregion
 
         #region End-Effector Orienting
