@@ -122,6 +122,7 @@ public class ArticulationDriver : MonoBehaviour
 
         #endregion
 
+        // This is due to Unity bug. And I am mitigating it here. 
         #region Stabilize ArticulationBody / Prevent Random Jittering
         foreach (MeshCollider collider in _palmColliders)
         {
