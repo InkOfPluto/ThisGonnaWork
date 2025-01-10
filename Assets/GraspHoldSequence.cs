@@ -129,7 +129,7 @@ public class GraspHoldSequence : MonoBehaviour
 
             if(targetCube.GetComponent<Rigidbody>().velocity.y < -0.1f)
             {
-                serial.WriteLine("fffbbbfff");
+                serial.WriteLine("fff");
                 Debug.Log("Slipping!");
                 break; 
             }
