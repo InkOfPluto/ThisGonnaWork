@@ -7,7 +7,7 @@ using Unity.VisualScripting;
 public class GraspHoldSequence : MonoBehaviour
 {
 
-    private SerialPort serial = new SerialPort("COM7", 115200);
+    private SerialPort serial = new SerialPort("COM8", 115200);
 
     public GameObject targetCube, offsetMass;
     public ArticulationBody shoulderLink;
@@ -129,7 +129,7 @@ public class GraspHoldSequence : MonoBehaviour
 
             if(targetCube.GetComponent<Rigidbody>().velocity.y < -0.1f)
             {
-                serial.WriteLine("fff");
+                serial.WriteLine("fgfgbnbn");
                 Debug.Log("Slipping!");
                 break; 
             }
