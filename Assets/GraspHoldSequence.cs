@@ -13,7 +13,7 @@ public class GraspHoldSequence : MonoBehaviour
     public ArticulationBody shoulderLink;
     public ArticulationBody fingerA, fingerB;
 
-    public float targetGrasperHeight = 20;
+    public float targetGrasperHeight = 19;
 
     float fingerACloseState = -0.025f; // Open state being 0 for both fingers 
     float fingerBCloseState = 0.025f;
@@ -27,13 +27,21 @@ public class GraspHoldSequence : MonoBehaviour
 
     void Start()
     {
-        serial.Open(); 
+
+        try
+        {
+            serial.Open();
+        }
+        catch { print("Something went wrong!"); }
 
         originalMass = offsetMass.GetComponent<Rigidbody>().mass;
         originalPos = targetCube.transform.position;
         originalRot = targetCube.transform.rotation;
         originalOffsetPos = offsetMass.transform.position;
         originalOffsetRot = offsetMass.transform.rotation;
+
+        Debug.Log("Original Pos: \n" + originalPos);
+
     }
 
     void Update()
@@ -48,26 +56,19 @@ public class GraspHoldSequence : MonoBehaviour
             }
             graspholdRoutine = StartCoroutine(GraspHoldSeuqnce());
         }
-
-        //if(Input.GetKeyDown(KeyCode.F))
-        //{
-        //    serial.WriteLine("ffff"); 
-        //}
-        //if (Input.GetKeyDown(KeyCode.B))
-        //{
-        //    serial.WriteLine("b");
-        //}
     }
 
     // Special loop (Coroutine) where we can control the sequence of events in a more controlled fashion
     private IEnumerator GraspHoldSeuqnce()
     {
         // Reset everything to the starting conditions
-        targetCube.GetComponent<BoxCollider>().enabled = false;
-        offsetMass.GetComponent<BoxCollider>().enabled = false;
         targetCube.GetComponent<Rigidbody>().isKinematic = true;
         offsetMass.GetComponent<Rigidbody>().isKinematic = true;
         offsetMass.GetComponent<Rigidbody>().mass = originalMass;
+        //targetCube.GetComponent<BoxCollider>().enabled = false;
+        //targetCube.GetComponent<SphereCollider>().enabled = false;
+        targetCube.GetComponent<CapsuleCollider>().enabled = false;
+        offsetMass.GetComponent<BoxCollider>().enabled = false;
 
         ArticulationDrive drive_fingA = fingerA.zDrive; // Assuming rotation around x-axis
         drive_fingA.target = 0f;
@@ -78,7 +79,7 @@ public class GraspHoldSequence : MonoBehaviour
         fingerB.zDrive = drive_fingB;
 
         ArticulationDrive drive_shoulder = shoulderLink.xDrive; // Assuming rotation around x-axis
-        drive_shoulder.target = 23f;
+        drive_shoulder.target = 25f;
         shoulderLink.xDrive = drive_shoulder;
 
         yield return new WaitForSeconds(1f);
@@ -90,7 +91,9 @@ public class GraspHoldSequence : MonoBehaviour
 
         yield return new WaitForSeconds(1f);
 
-        targetCube.GetComponent<BoxCollider>().enabled = true;
+        //targetCube.GetComponent<BoxCollider>().enabled = true;
+        //targetCube.GetComponent<SphereCollider>().enabled = true;
+        targetCube.GetComponent<CapsuleCollider>().enabled = true;
         offsetMass.GetComponent<BoxCollider>().enabled = true;
         targetCube.GetComponent<Rigidbody>().isKinematic = false;
         offsetMass.GetComponent<Rigidbody>().isKinematic = false;
@@ -129,7 +132,12 @@ public class GraspHoldSequence : MonoBehaviour
 
             if(targetCube.GetComponent<Rigidbody>().velocity.y < -0.1f)
             {
-                serial.WriteLine("fgfgbnbn");
+                try
+                {
+                    serial.WriteLine("fgfgbnbn");
+                }
+                catch { print("No messages sent via serial!!!"); }
+
                 Debug.Log("Slipping!");
                 break; 
             }
