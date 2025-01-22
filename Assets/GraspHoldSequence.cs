@@ -34,8 +34,12 @@ public class GraspHoldSequence : MonoBehaviour
         originalOffsetPos = offsetMass.transform.position;
         originalOffsetRot = offsetMass.transform.rotation;
 
-        serial1.Open();
-        serial2.Open();
+        try
+        {
+            serial1.Open();
+            serial2.Open();
+        }
+        catch { print("Something went wrong!"); }
     }
 
     void Update()
@@ -131,9 +135,19 @@ public class GraspHoldSequence : MonoBehaviour
 
             if(targetCube.GetComponent<Rigidbody>().velocity.y < -0.1f)
             {
-                serial1.WriteLine("fgfgbnbn");
-                Debug.Log("Slipping!");
-                break; 
+                try
+                {
+                    serial1.WriteLine("fgfgbnbn");
+                    Debug.Log("Slipping!");
+                    break;
+
+                    serial2.WriteLine("fgfgbnbn");
+                    Debug.Log("Slipping");
+                    break;
+                }
+                catch { print("Something went wrong!"); }
+
+
             }
 
             yield return null; 
