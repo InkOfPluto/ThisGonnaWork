@@ -7,7 +7,8 @@ using Unity.VisualScripting;
 public class GraspHoldSequence : MonoBehaviour
 {
 
-    private SerialPort serial = new SerialPort("COM8", 115200);
+    private SerialPort serial1 = new SerialPort("COM3", 115200);
+    private SerialPort serial2 = new SerialPort("COM4", 115200);
 
     public GameObject targetCube, offsetMass;
     public ArticulationBody shoulderLink;
@@ -27,13 +28,14 @@ public class GraspHoldSequence : MonoBehaviour
 
     void Start()
     {
-        serial.Open(); 
-
         originalMass = offsetMass.GetComponent<Rigidbody>().mass;
         originalPos = targetCube.transform.position;
         originalRot = targetCube.transform.rotation;
         originalOffsetPos = offsetMass.transform.position;
         originalOffsetRot = offsetMass.transform.rotation;
+
+        serial1.Open();
+        serial2.Open();
     }
 
     void Update()
@@ -129,7 +131,7 @@ public class GraspHoldSequence : MonoBehaviour
 
             if(targetCube.GetComponent<Rigidbody>().velocity.y < -0.1f)
             {
-                serial.WriteLine("fgfgbnbn");
+                serial1.WriteLine("fgfgbnbn");
                 Debug.Log("Slipping!");
                 break; 
             }
