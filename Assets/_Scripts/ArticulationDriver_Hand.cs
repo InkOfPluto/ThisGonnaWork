@@ -43,7 +43,8 @@ public class ArticulationDriver_Hand : MonoBehaviour
     public TMP_Text infoText;
 
     ArticulationBody thisArticulation; // Root-Parent articulation body 
-    float xTargetAngle, yTargetAngle = 0f;
+    float xTargetAngle, yTargetAngle, zTargetAngle = 0f;
+    float[] minx, miny, minz, maxx, maxy, maxz = new float[15];
 
     [Range(-90f, 90f)]
     public float angle = 0f;
@@ -132,226 +133,108 @@ public class ArticulationDriver_Hand : MonoBehaviour
         // *******************************************************************************************
         // *******************************************************************************************
 
+        //if(Input.GetKeyDown(KeyCode.M))
+        //{
+
+        //}
+
+
         for (int i = 0; i < driverJoints.Length; i++)
         {
-            float ang_targX = 0f;
-            float tempAng = 0f;
+            float tempAngX = 0f;
             float tempAngY = 0f;
+            float tempAngZ = 0f;
+
+            float ang_targX = 0f;
             float ang_targY = 0f;
+            float ang_targZ = 0f; 
 
-            // # Add more thumb DoFs. Perhaps change thumb joint type form revolute to spherical 
-            if (driverJoints[i].name.Contains("thumb"))
+            // For the left and right hand thumb joint 0 the direction in one of the axis is reversed 
+            if (handedness == Hand.Right)
             {
-                // For the left and right hand thumb joint 0 the direction in one of the axis is reversed 
-                if (handedness == Hand.Right)
-                {
-                    if (driverJoints[i].name.Contains("thumb0"))
-                    {
-                        // X-Axis joint control
-                        tempAng = driverJoints[i].transform.localRotation.eulerAngles.z;
-                        if (tempAng < 100f) { xTargetAngle = tempAng + 360f; }
-                        else { xTargetAngle = tempAng; }
-                        xTargetAngle = tempAng;
-                        ang_targX = map(xTargetAngle, 365f, 300f, -29f, 29f); // angle;
-                                                                              //infoText.text = "ProxyHand v0.2 \nAngles: " + xTargetAngle.ToString("F2");
 
-                        // Z-Axis joint control
-                        tempAngY = driverJoints[i].transform.localRotation.eulerAngles.y;
-                        if (tempAngY < 100f) { yTargetAngle = tempAngY + 360f; }
-                        else { yTargetAngle = tempAngY; }
-                        yTargetAngle = tempAngY;
-                        ang_targY = map(yTargetAngle, 300f, 285f, -15, 5f);
-                        //infoText.text = "ProxyHand v0.2 \nAngles: " + ang_targY.ToString("F2");
-                    }
-                    else if (driverJoints[i].name.Contains("thumb1"))
-                    {
-                        tempAngY = driverJoints[i].transform.localRotation.eulerAngles.y;
-                        if (tempAngY < 100f) { yTargetAngle = tempAngY + 360f; }
-                        else { yTargetAngle = tempAngY; }
-                        yTargetAngle = tempAngY;
-                        ang_targY = map(yTargetAngle, 330f, 25f, -10f, 50f);
-                        //infoText.text = "ProxyHand v0.1 \nAngles: " + ang_targY.ToString("F2");
-                    }
-                    else
-                    {
-                        tempAng = driverJoints[i].transform.localRotation.eulerAngles.z;
-                        if (tempAng < 100f) { xTargetAngle = tempAng + 360f; }
-                        else { xTargetAngle = tempAng; }
+                // Adduction-Abduction
+                //tempAngX = driverJoints[i].transform.localRotation.eulerAngles.x;
+                //if (tempAngX < 100f) { xTargetAngle = tempAngX + 360f; }
+                //else { xTargetAngle = tempAngX; }
+                //if (xTargetAngle < minx[i]) { minx[i] = xTargetAngle; }
+                //if (xTargetAngle > maxx[i]) { maxx[i] = xTargetAngle; }
+                //ang_targX = map(xTargetAngle, minx[i], maxx[i], -10f, 10f);
+                //ang_targX = xTargetAngle;
 
-                        ang_targX = map(xTargetAngle, 380f, 300f, -40f, 80f);
-                        //RotateTo(articulationBods[i], ang_targ);
-                    }
-                }
-                else if (handedness == Hand.Left)
-                {
-                    if (driverJoints[i].name.Contains("thumb0"))
-                    {
-                        // X-Axis joint control
-                        tempAng = driverJoints[i].transform.localRotation.eulerAngles.z;
-                        if (tempAng < 100f) { xTargetAngle = tempAng + 360f; }
-                        else { xTargetAngle = tempAng; }
-                        xTargetAngle = tempAng;
-                        ang_targX = map(xTargetAngle, 365f, 300f, -29f, 29f); // angle;
-                        infoText.text = "ARiHand v0.2 \nAngles: " + xTargetAngle.ToString("F2");
-
-                        // Z-Axis joint control
-                        tempAngY = driverJoints[i].transform.localRotation.eulerAngles.y;
-                        if (tempAngY < 100f) { yTargetAngle = tempAngY + 360f; }
-                        else { yTargetAngle = tempAngY; }
-                        yTargetAngle = tempAngY;
-                        ang_targY = map(yTargetAngle, 300f, 285f, -15, 5f);
-                        //infoText.text = "ProxyHand v0.2 \nAngles: " + ang_targY.ToString("F2");
-                    }
-                    else if (driverJoints[i].name.Contains("thumb1"))
-                    {
-                        tempAngY = driverJoints[i].transform.localRotation.eulerAngles.y;
-                        if (tempAngY < 100f) { yTargetAngle = tempAngY + 360f; }
-                        else { yTargetAngle = tempAngY; }
-                        yTargetAngle = tempAngY;
-                        ang_targY = map(yTargetAngle, 330f, 25f, -10f, 50f);
-                        //infoText.text = "ProxyHand v0.1 \nAngles: " + ang_targY.ToString("F2");
-                    }
-                    else
-                    {
-                        tempAng = driverJoints[i].transform.localRotation.eulerAngles.z;
-                        if (tempAng < 100f) { xTargetAngle = tempAng + 360f; }
-                        else { xTargetAngle = tempAng; }
-
-                        ang_targX = map(xTargetAngle, 380f, 300f, -40f, 80f);
-                        //RotateTo(articulationBods[i], ang_targ);
-                    }
-                }
-
-                RotateTo(articulationBods[i], ang_targX, ang_targY);
-            }
-            else
-            {
-                tempAng = driverJoints[i].transform.localRotation.eulerAngles.z;
-                if (tempAng < 100f) { xTargetAngle = tempAng + 360f; }
-                else { xTargetAngle = tempAng; }
-                ang_targX = map(xTargetAngle, 372f, 270f, -10f, 85f);
-                //RotateTo(articulationBods[i], ang_targ);
-
-                tempAngY = driverJoints[i].transform.localRotation.eulerAngles.x;
-                //if (tempAngY < 100f) { yTargetAngle = tempAngY + 360f; }
+                //// Flexion-Extention
+                //tempAngY = driverJoints[i].transform.localRotation.eulerAngles.y;
+                //if (tempAngY < 100f) { xTargetAngle = tempAngY + 360f; }
                 //else { yTargetAngle = tempAngY; }
-                yTargetAngle = tempAngY;
-                ang_targY = map(yTargetAngle, 10, 1f, 0f, 10f);
-                //infoText.text = "ProxyHand v0.1 \nAngles: " + yTargetAngle.ToString("F2") + " Mapped Angle: " + ang_targY.ToString("F2");
-                RotateTo(articulationBods[i], ang_targX, ang_targY);
+                //if(yTargetAngle < miny[i]) { miny[i] =  yTargetAngle; }
+                //if(yTargetAngle > maxy[i]) { maxy[i] = yTargetAngle; }
+                //ang_targX = map(yTargetAngle, miny[i], maxy[i], -35f, 35f);
+
+                //// Thumb rotation only on MCP joint?
+                //tempAngZ = driverJoints[i].transform.localRotation.eulerAngles.z;
+                //if (tempAngZ < 100f) { zTargetAngle = tempAngZ + 360f; }
+                //else { zTargetAngle = tempAngZ; }
+                //if (zTargetAngle < minz[i]) { minz[i] = zTargetAngle; }
+                //if (zTargetAngle > maxz[i]) { maxz[i] = zTargetAngle; }
+                //ang_targZ = map(zTargetAngle, minz[i], maxz[i], -35f, 35f);
+
+                if (driverJoints[i].gameObject.name.Contains("IndexProx"))
+                {
+                    tempAngX = driverJoints[i].transform.localRotation.eulerAngles.x;
+
+                    infoText.text = "Angle: " + tempAngX.ToString();
+                }
+
+                //if (driverJoints[i].tag.Contains("thumb0"))
+                //{
+                //    // X-Axis joint control
+                //    tempAngX = driverJoints[i].transform.localRotation.eulerAngles.z;
+                //    if (tempAngX < 100f) { xTargetAngle = tempAngX + 360f; }
+                //    else { xTargetAngle = tempAngX; }
+                //    xTargetAngle = tempAngX;
+                //    ang_targX = map(xTargetAngle, 365f, 300f, -29f, 29f);
+
+                //    tempAngY = driverJoints[i].transform.localRotation.eulerAngles.y;
+                //    if (tempAngY < 100f) { yTargetAngle = tempAngY + 360f; }
+                //    else { yTargetAngle = tempAngY; }
+                //    yTargetAngle = tempAngY;
+                //    ang_targY = map(yTargetAngle, 300f, 285f, -15, 5f);
+                //}
+                //else if (driverJoints[i].tag.Contains("thumb1"))
+                //{
+                //    tempAngY = driverJoints[i].transform.localRotation.eulerAngles.y;
+                //    if (tempAngY < 100f) { yTargetAngle = tempAngY + 360f; }
+                //    else { yTargetAngle = tempAngY; }
+                //    yTargetAngle = tempAngY;
+                //    ang_targY = map(yTargetAngle, 330f, 25f, -10f, 50f);
+                //}
+                //else if (driverJoints[i].tag.Contains("thumb2"))
+                //{
+                //    tempAngX = driverJoints[i].transform.localRotation.eulerAngles.z;
+                //    if (tempAngX < 100f) { xTargetAngle = tempAngX + 360f; }
+                //    else { xTargetAngle = tempAngX; }
+
+                //    ang_targX = map(xTargetAngle, 380f, 300f, -40f, 80f);
+                //}
+                //else
+                //{
+                //    tempAngX = driverJoints[i].transform.localRotation.eulerAngles.z;
+                //    if (tempAngX < 100f) { xTargetAngle = tempAngX + 360f; }
+                //    else { xTargetAngle = tempAngX; }
+                //    ang_targX = map(xTargetAngle, 372f, 270f, -10f, 85f);
+
+                //    tempAngY = driverJoints[i].transform.localRotation.eulerAngles.x;
+
+                //    yTargetAngle = tempAngY;
+                //    ang_targY = map(yTargetAngle, 10, 1f, 0f, 10f);
+                //}
+
+                RotateTo(articulationBods[i], ang_targX, ang_targY, ang_targZ);
             }
         }
     }
 
-    // Coroutine is too slow 
-    IEnumerator UpdateArtHand()
-    {
-        while (true)
-        {
-            //// Counter Gravity; force = mass * acceleration
-            //_palmBody.AddForce(-Physics.gravity * _palmBody.mass);
-            //foreach (ArticulationBody body in _articulationBodies)
-            //{
-            //    //int dofs = body.jointVelocity.dofCount;
-            //    float velLimit = 1.75f;
-            //    body.maxAngularVelocity = velLimit;
-            //    body.maxDepenetrationVelocity = 3f;
-
-            //    body.AddForce(-Physics.gravity * body.mass);
-            //}
-
-            // *******************************************************************************************
-            // *******************************************************************************************
-            // *******************************************************************************************
-
-            #region Settings for Articulation Body 
-            foreach (BoxCollider collider in _palmColliders)
-            {
-                collider.enabled = false;
-                yield return null;
-            }
-
-            foreach (CapsuleCollider collider in _capsuleColliders)
-            {
-                collider.enabled = false;
-                yield return null;
-            }
-            for (int a = 0; a < articulationBods.Length; a++)
-            {
-                articulationBods[a].jointVelocity = new ArticulationReducedSpace(0f, 0f, 0f);
-                articulationBods[a].velocity = Vector3.zero;
-                articulationBods[a].angularVelocity = Vector3.zero;
-                yield return null;
-            }
-            foreach (BoxCollider collider in _palmColliders)
-            {
-                collider.enabled = true;
-                yield return null;
-            }
-            foreach (CapsuleCollider collider in _capsuleColliders)
-            {
-                collider.enabled = true;
-                yield return null;
-            }
-            #endregion
-
-            // *******************************************************************************************
-            // *******************************************************************************************
-            // *******************************************************************************************
-
-            Quaternion rotWithOffset = driverHandRoot.rotation * Quaternion.Euler(rotataionalOffset);
-            thisArticulation.TeleportRoot(driverHandRoot.position, rotWithOffset);
-
-            int i = 0;
-            int j = 0;
-            //Transform prevBone, bone; 
-            foreach (ArticulationBody artBod in articulationBods)
-            {
-
-
-                Transform prevBone = driverJoints[i];
-                print("i1: " + i.ToString());
-
-                i++;
-                j = i % (articulationBods.Length);
-                //Debug.Log("j: " + j + " i: " + i);
-
-                Transform bone = driverJoints[j];
-                print("i2: " + j.ToString());
-
-                //float xTargetAngle = AngleBetween(prevBone.position, bone.position);
-                //VelocityDrive(artBod, xTargetAngle);
-
-
-                RotateTo(artBod, xTargetAngle);
-
-                xTargetAngle = Vector3.SignedAngle(
-                            prevBone.localRotation * Vector3.right,
-                            bone.transform.localRotation * Vector3.right,
-                            prevBone.transform.localRotation * Vector3.up);
-
-                infoText.text = "ProxyHand v0.1 \nAngles: " + xTargetAngle.ToString("F2");
-                yield return null;
-            }
-
-            yield return null;
-        }
-    }
-
-    void RotateTo(ArticulationBody body, float targetTor)
-    {
-        body.xDrive = new ArticulationDrive()
-        {
-            stiffness = body.xDrive.stiffness,
-            forceLimit = body.xDrive.forceLimit,
-            damping = body.xDrive.damping,
-            lowerLimit = body.xDrive.lowerLimit,
-            upperLimit = body.xDrive.upperLimit,
-            target = targetTor
-        };
-    }
-
-    void RotateTo(ArticulationBody body, float targetTorX, float targetTorY)
+    void RotateTo(ArticulationBody body, float targetTorX = 0f, float targetTorY = 0f, float targetTorZ = 0f)
     {
         body.xDrive = new ArticulationDrive()
         {
@@ -362,6 +245,15 @@ public class ArticulationDriver_Hand : MonoBehaviour
             upperLimit = body.xDrive.upperLimit,
             target = targetTorX
         };
+        body.yDrive = new ArticulationDrive()
+        {
+            stiffness = body.yDrive.stiffness,
+            forceLimit = body.yDrive.forceLimit,
+            damping = body.yDrive.damping,
+            lowerLimit = body.yDrive.lowerLimit,
+            upperLimit = body.yDrive.upperLimit,
+            target = targetTorY
+        };
         body.zDrive = new ArticulationDrive()
         {
             stiffness = body.zDrive.stiffness,
@@ -369,71 +261,8 @@ public class ArticulationDriver_Hand : MonoBehaviour
             damping = body.zDrive.damping,
             lowerLimit = body.zDrive.lowerLimit,
             upperLimit = body.zDrive.upperLimit,
-            target = targetTorY
+            target = targetTorZ
         };
-    }
-
-    void RotateTo(ArticulationBody articulation, Vector3 targetTor)
-    {
-        #region Approach 1
-        //articulation.xDrive = new ArticulationDrive()
-        //{
-        //    target = targetTor.x
-        //};
-
-        //articulation.yDrive = new ArticulationDrive()
-        //{
-        //    target = targetTor.y
-        //};
-
-        //articulation.zDrive = new ArticulationDrive()
-        //{
-        //    target = targetTor.z
-        //};
-        #endregion
-
-        #region Approach 2
-        var driveX = articulation.xDrive;
-        driveX.target = targetTor.x;
-        articulation.xDrive = driveX;
-
-        var driveY = articulation.yDrive;
-        driveY.target = targetTor.y;
-        articulation.yDrive = driveY;
-
-        var driveZ = articulation.zDrive;
-        driveZ.target = targetTor.z;
-        articulation.zDrive = driveZ;
-        #endregion  
-    }
-
-    void VelocityDrive(ArticulationBody body, float xTargetAngle)
-    {
-        body.xDrive = new ArticulationDrive()
-        {
-            stiffness = body.xDrive.stiffness,
-            forceLimit = body.xDrive.forceLimit,
-            damping = body.xDrive.damping,
-            lowerLimit = body.xDrive.lowerLimit,
-            upperLimit = body.xDrive.upperLimit,
-            target = xTargetAngle
-        };
-    }
-
-    float AngleBetween(Vector3 v1, Vector3 v2)
-    {
-        Vector3 v1_u = v1.normalized;
-        Vector3 v2_u = v2.normalized;
-
-        float dotProd = Vector3.Dot(v1_u, v2_u);
-        dotProd = Mathf.Clamp01(dotProd);
-        float mappedVal = map(dotProd, 0f, 1f, -1f, 1f);
-
-        float radians = Mathf.Acos(mappedVal);
-        float degrees = (180f / Mathf.PI) * radians;
-        Debug.Log("degrees: " + degrees);
-
-        return degrees;
     }
 
     public static float map(float value, float leftMin, float leftMax, float rightMin, float rightMax)
@@ -501,3 +330,4 @@ public class ArticulationDriver_Hand : MonoBehaviour
 //    //    infoText.text = "ProxyHand v0.1 \nAngles: " + xTargetAngle.ToString("F2");
 //    //}
 //}
+

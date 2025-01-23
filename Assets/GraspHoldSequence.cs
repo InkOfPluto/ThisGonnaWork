@@ -13,6 +13,7 @@ public class GraspHoldSequence : MonoBehaviour
     public ArticulationBody shoulderLink;
     public ArticulationBody fingerA, fingerB;
 
+
     public float targetGrasperHeight = 19;
 
     float fingerACloseState = -0.025f; // Open state being 0 for both fingers 
