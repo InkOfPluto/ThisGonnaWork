@@ -12,12 +12,13 @@ public class GraspHoldSequence : MonoBehaviour
 
     public GameObject targetCube, offsetMass;
     public ArticulationBody shoulderLink;
-    public ArticulationBody fingerA, fingerB;
+    public ArticulationBody tmb, index, mid, ring;
 
-    public float targetGrasperHeight = 20;
 
-    float fingerACloseState = -0.025f; // Open state being 0 for both fingers 
-    float fingerBCloseState = 0.025f;
+    public float targetGrasperHeight = 19;
+
+    float tmbCloseState = 0.1f; // And Ring  
+    float indexCloseState = -0.1f; // And middle finger 
 
     Coroutine graspholdRoutine;
 
@@ -54,37 +55,38 @@ public class GraspHoldSequence : MonoBehaviour
             }
             graspholdRoutine = StartCoroutine(GraspHoldSeuqnce());
         }
-
-        //if(Input.GetKeyDown(KeyCode.F))
-        //{
-        //    serial.WriteLine("ffff"); 
-        //}
-        //if (Input.GetKeyDown(KeyCode.B))
-        //{
-        //    serial.WriteLine("b");
-        //}
     }
 
     // Special loop (Coroutine) where we can control the sequence of events in a more controlled fashion
     private IEnumerator GraspHoldSeuqnce()
     {
         // Reset everything to the starting conditions
-        targetCube.GetComponent<BoxCollider>().enabled = false;
-        offsetMass.GetComponent<BoxCollider>().enabled = false;
         targetCube.GetComponent<Rigidbody>().isKinematic = true;
         offsetMass.GetComponent<Rigidbody>().isKinematic = true;
         offsetMass.GetComponent<Rigidbody>().mass = originalMass;
+        //targetCube.GetComponent<BoxCollider>().enabled = false;
+        //targetCube.GetComponent<SphereCollider>().enabled = false;
+        targetCube.GetComponent<CapsuleCollider>().enabled = false;
+        offsetMass.GetComponent<BoxCollider>().enabled = false;
 
-        ArticulationDrive drive_fingA = fingerA.zDrive; // Assuming rotation around x-axis
-        drive_fingA.target = 0f;
-        fingerA.zDrive = drive_fingA;
+        ArticulationDrive thumb_digit = tmb.yDrive; // Assuming rotation around x-axis
+        thumb_digit.target = 0f;
+        tmb.yDrive = thumb_digit;
 
-        ArticulationDrive drive_fingB = fingerB.zDrive; // Assuming rotation around x-axis
-        drive_fingB.target = 0f;
-        fingerB.zDrive = drive_fingB;
+        ArticulationDrive index_digit = index.yDrive; // Assuming rotation around x-axis
+        index_digit.target = -0.05f;
+        index.yDrive = index_digit;
+
+        ArticulationDrive middle_digit = mid.zDrive; // Assuming rotation around x-axis
+        middle_digit.target = -0.05f;
+        mid.zDrive = middle_digit;
+
+        ArticulationDrive ring_digit = ring.zDrive; // Assuming rotation around x-axis
+        ring_digit.target = 0f;
+        ring.zDrive = ring_digit;
 
         ArticulationDrive drive_shoulder = shoulderLink.xDrive; // Assuming rotation around x-axis
-        drive_shoulder.target = 23f;
+        drive_shoulder.target = 25f;
         shoulderLink.xDrive = drive_shoulder;
 
         yield return new WaitForSeconds(1f);
@@ -96,7 +98,9 @@ public class GraspHoldSequence : MonoBehaviour
 
         yield return new WaitForSeconds(1f);
 
-        targetCube.GetComponent<BoxCollider>().enabled = true;
+        //targetCube.GetComponent<BoxCollider>().enabled = true;
+        //targetCube.GetComponent<SphereCollider>().enabled = true;
+        targetCube.GetComponent<CapsuleCollider>().enabled = true;
         offsetMass.GetComponent<BoxCollider>().enabled = true;
         targetCube.GetComponent<Rigidbody>().isKinematic = false;
         offsetMass.GetComponent<Rigidbody>().isKinematic = false;
@@ -106,13 +110,21 @@ public class GraspHoldSequence : MonoBehaviour
         // --------------------------------------------------------------------------------------------
 
         // 1. Finger A and B to close on the object (to finger close state) 
-        drive_fingA = fingerA.zDrive; // Assuming rotation around x-axis
-        drive_fingA.target = fingerACloseState;
-        fingerA.zDrive = drive_fingA;
+        thumb_digit = tmb.yDrive; // Assuming rotation around x-axis
+        thumb_digit.target = tmbCloseState;
+        tmb.yDrive = thumb_digit;
 
-        drive_fingB = fingerB.zDrive; // Assuming rotation around x-axis
-        drive_fingB.target = fingerBCloseState;
-        fingerB.zDrive = drive_fingB;
+        index_digit = index.yDrive; // Assuming rotation around x-axis
+        index_digit.target = indexCloseState;
+        index.yDrive = index_digit;
+
+        middle_digit = mid.zDrive; // Assuming rotation around x-axis
+        middle_digit.target = indexCloseState;
+        mid.zDrive = middle_digit;
+
+        ring_digit = ring.zDrive; // Assuming rotation around x-axis
+        ring_digit.target = tmbCloseState;
+        ring.zDrive = ring_digit;
 
         // Set a small pause here to give the fingers a bit of time to close
         yield return new WaitForSeconds(1f); 
@@ -138,11 +150,8 @@ public class GraspHoldSequence : MonoBehaviour
                 try
                 {
                     serial1.WriteLine("fgfgbnbn");
-                    Debug.Log("Slipping!");
-                    break;
-
                     serial2.WriteLine("fgfgbnbn");
-                    Debug.Log("Slipping");
+                    Debug.Log("Slipping!");
                     break;
                 }
                 catch { print("Something went wrong!"); }

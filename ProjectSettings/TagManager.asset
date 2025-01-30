@@ -5,6 +5,9 @@ TagManager:
   serializedVersion: 2
   tags:
   - Anchor
+  - thumb0
+  - thumb1
+  - thumb2
   layers:
   - Default
   - TransparentFX
