@@ -13,12 +13,12 @@ public class GraspHoldSequence : MonoBehaviour
     public GameObject targetCube, offsetMass;
     public ArticulationBody shoulderLink;
     public ArticulationBody tmb, index, mid, ring;
-
+    public float graspDepth = 30f;
 
     public float targetGrasperHeight = 19;
 
-    float tmbCloseState = 0.1f; // And Ring  
-    float indexCloseState = -0.1f; // And middle finger 
+    float tmbCloseState = 0.05f; // And Ring  
+    float indexCloseState = -0.05f; // And middle finger 
 
     Coroutine graspholdRoutine;
 
@@ -74,11 +74,11 @@ public class GraspHoldSequence : MonoBehaviour
         tmb.yDrive = thumb_digit;
 
         ArticulationDrive index_digit = index.yDrive; // Assuming rotation around x-axis
-        index_digit.target = -0.05f;
+        index_digit.target = 0f;
         index.yDrive = index_digit;
 
         ArticulationDrive middle_digit = mid.zDrive; // Assuming rotation around x-axis
-        middle_digit.target = -0.05f;
+        middle_digit.target = 0f;
         mid.zDrive = middle_digit;
 
         ArticulationDrive ring_digit = ring.zDrive; // Assuming rotation around x-axis
@@ -86,7 +86,7 @@ public class GraspHoldSequence : MonoBehaviour
         ring.zDrive = ring_digit;
 
         ArticulationDrive drive_shoulder = shoulderLink.xDrive; // Assuming rotation around x-axis
-        drive_shoulder.target = 25f;
+        drive_shoulder.target = graspDepth;
         shoulderLink.xDrive = drive_shoulder;
 
         yield return new WaitForSeconds(1f);
@@ -143,7 +143,7 @@ public class GraspHoldSequence : MonoBehaviour
 
         while(offsetMass.GetComponent<Rigidbody>().mass < targetOffsetMass)
         {
-            offsetMass.GetComponent<Rigidbody>().mass += 0.1f;
+            offsetMass.GetComponent<Rigidbody>().mass += 1f;
 
             if(targetCube.GetComponent<Rigidbody>().velocity.y < -0.1f)
             {
