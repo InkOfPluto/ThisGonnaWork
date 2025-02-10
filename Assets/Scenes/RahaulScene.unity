@@ -368,7 +368,7 @@ GameObject:
   - component: {fileID: 82457859}
   - component: {fileID: 82457858}
   m_Layer: 0
-  m_Name: Cube (2)
+  m_Name: offsetCube
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -3286,7 +3286,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   handedness: 1
   _palmBody: {fileID: 2003843658}
-  driverHand: {fileID: 1642420922}
+  driverHand: {fileID: 82457862}
   driverJoints:
   - {fileID: 110386039}
   - {fileID: 1582313664}
@@ -8966,8 +8966,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   vrHand: {fileID: 1642420922}
-  robotHand: {fileID: 1686455105}
-  positionOffset: {x: 5, y: 5, z: 5}
+  robotHand: {fileID: 82457862}
+  positionOffset: {x: 0.2, y: 0, z: 0}
   rotationalOffset: {x: 0, y: 0, z: 0}
 --- !u!4 &1337688962 stripped
 Transform:
@@ -12052,13 +12052,13 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1804650246}
-  m_Enabled: 0
+  m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e0eec6d55aba3d74a86d5656a486a01f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   _palmBody: {fileID: 1686455107}
-  driverHand: {fileID: 1134487023}
+  driverHand: {fileID: 82457862}
   articulationBods:
   - {fileID: 8191425596154807804}
   - {fileID: 6298126353808310270}
