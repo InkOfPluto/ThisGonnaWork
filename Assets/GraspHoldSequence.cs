@@ -23,9 +23,9 @@ public class GraspHoldSequence : MonoBehaviour
     Coroutine graspholdRoutine;
 
     public float targetOffsetMass = 2f;
-    float originalMass; 
-    Vector3 originalPos, originalOffsetPos; 
-    Quaternion originalRot, originalOffsetRot; 
+    float originalMass;
+    Vector3 originalPos, originalOffsetPos;
+    Quaternion originalRot, originalOffsetRot;
 
     void Start()
     {
@@ -49,16 +49,16 @@ public class GraspHoldSequence : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.S))
         {
-            if(graspholdRoutine != null)
+            if (graspholdRoutine != null)
             {
-                StopCoroutine(graspholdRoutine); 
+                StopCoroutine(graspholdRoutine);
             }
-            graspholdRoutine = StartCoroutine(GraspHoldSeuqnce());
+            graspholdRoutine = StartCoroutine(GraspHolderSequence());
         }
     }
 
     // Special loop (Coroutine) where we can control the sequence of events in a more controlled fashion
-    private IEnumerator GraspHoldSeuqnce()
+    private IEnumerator GraspHolderSequence()
     {
         // Reset everything to the starting conditions
         targetCube.GetComponent<Rigidbody>().isKinematic = true;
@@ -127,7 +127,7 @@ public class GraspHoldSequence : MonoBehaviour
         ring.zDrive = ring_digit;
 
         // Set a small pause here to give the fingers a bit of time to close
-        yield return new WaitForSeconds(1f); 
+        yield return new WaitForSeconds(1f);
 
         // 2. Want shoulder link to lift up to a given target height (targetGrasperHeight)
         drive_shoulder = shoulderLink.xDrive; // Assuming rotation around x-axis
@@ -139,13 +139,13 @@ public class GraspHoldSequence : MonoBehaviour
 
         // 3. Once at the target height, then slowly increase the attached weight to the target object 
         Debug.Log("Start increasing the object's offset mass!");
-        
 
-        while(offsetMass.GetComponent<Rigidbody>().mass < targetOffsetMass)
+
+        while (offsetMass.GetComponent<Rigidbody>().mass < targetOffsetMass)
         {
             offsetMass.GetComponent<Rigidbody>().mass += 1f;
 
-            if(targetCube.GetComponent<Rigidbody>().velocity.y < -0.1f)
+            if (targetCube.GetComponent<Rigidbody>().velocity.y < -0.1f)
             {
                 try
                 {
@@ -155,16 +155,32 @@ public class GraspHoldSequence : MonoBehaviour
                     break;
                 }
                 catch { print("Something went wrong!"); }
-
-
             }
 
-            yield return null; 
+            yield return null;
         }
 
-        Debug.Log("Slip ended!"); 
+        Debug.Log("Slip ended!");
 
 
-        yield return null; 
+        yield return null;
+
+    }
+    //MAPPING FUNCTION FROM VR HAND TO ROBOT HAND
+    public static float mapIndex(float value, float leftMin, float leftMax, float rightMin, float rightMax)
+    {
+        return rightMin + (value - leftMin) * (rightMax - rightMin) / (leftMax - leftMin);
+    }
+    public static float mapMiddle(float value, float leftMin, float leftMax, float rightMin, float rightMax)
+    {
+        return rightMin + (value - leftMin) * (rightMax - rightMin) / (leftMax - leftMin);
+    }
+    public static float mapRing(float value, float leftMin, float leftMax, float rightMin, float rightMax)
+    {
+        return rightMin + (value - leftMin) * (rightMax - rightMin) / (leftMax - leftMin);
+    }
+    public static float mapThumb(float value, float leftMin, float leftMax, float rightMin, float rightMax)
+    {
+        return rightMin + (value - leftMin) * (rightMax - rightMin) / (leftMax - leftMin);
     }
 }

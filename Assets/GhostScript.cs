@@ -31,13 +31,7 @@ public class GhostScript : MonoBehaviour
             robotHand.rotation = Quaternion.Euler(robotRotOffset);
         }
     }
-
-    // public void SetOffset(Vector3 posOffset, Vector3 rotOffset)
-    // {
-    //     positionOffset = posOffset;
-    //     rotationalOffset = rotOffset;
-    // }
-
-    //Ghost object, shares same properties as the object that the robot will pick up
-    //Grasp when we grasp.
+/* TODO:
+MAPPING FUNCTION FROM HUMAN HAND TO ROBOT HAND
+*/
 }
