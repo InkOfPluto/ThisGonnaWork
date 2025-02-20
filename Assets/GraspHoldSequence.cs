@@ -17,8 +17,10 @@ public class GraspHoldSequence : MonoBehaviour
 
     public float targetGrasperHeight = 19;
 
-    float tmbCloseState = 0.05f; // And Ring  
-    float indexCloseState = -0.05f; // And middle finger 
+    float tmbCloseState = 0.05f; 
+    float indexCloseState = -0.05f; 
+    float middleCloseState = -0.05f; 
+    float ringCloseState = 0.05f; 
 
     Coroutine graspholdRoutine;
 
@@ -55,7 +57,51 @@ public class GraspHoldSequence : MonoBehaviour
             }
             graspholdRoutine = StartCoroutine(GraspHolderSequence());
         }
+
+        //Mapping VR fingers to digits
+        float vrThumbValue = GetVRThumbValue(); 
+        float vrIndexValue = GetVRIndexValue();
+        float vrMiddleValue = GetVRMiddleValue();
+        float vrRingValue = GetVRRingValue();
+
+        ArticulationDrive thumbDrive = tmb.yDrive;
+        thumbDrive.target = mapThumb(vrThumbValue, 0f, 1f, tmbCloseState, 0f);
+        tmb.yDrive = thumbDrive;   
+
+        ArticulationDrive indexDrive = index.yDrive;
+        indexDrive.target = mapIndex(vrIndexValue, 0f, 1f, indexCloseState, 0f);
+        index.yDrive = indexDrive;
+
+        ArticulationDrive middleDrive = mid.zDrive;
+        middleDrive.target = mapMiddle(vrMiddleValue, 0f, 1f, middleCloseState, 0f);
+        mid.zDrive = middleDrive;
+
+        ArticulationDrive ringDrive = ring.zDrive;
+        ringDrive.target = mapRing(vrRingValue, 0f, 1f, ringCloseState, 0f);
+        ring.zDrive = ringDrive;
     }
+
+    //Placeholder to get VR Finger values
+    private float GetVRThumbValue()
+    {
+        return 0.5f;
+    }
+
+    private float GetVRIndexValue()
+    {
+        return 0.5f;
+    }
+
+    private float GetVRMiddleValue()
+    {
+        return 0.5f;
+    }
+
+    private float GetVRRingValue()
+    {
+        return 0.5f;
+    }
+
 
     // Special loop (Coroutine) where we can control the sequence of events in a more controlled fashion
     private IEnumerator GraspHolderSequence()
@@ -119,11 +165,11 @@ public class GraspHoldSequence : MonoBehaviour
         index.yDrive = index_digit;
 
         middle_digit = mid.zDrive; // Assuming rotation around x-axis
-        middle_digit.target = indexCloseState;
+        middle_digit.target = middleCloseState;
         mid.zDrive = middle_digit;
 
         ring_digit = ring.zDrive; // Assuming rotation around x-axis
-        ring_digit.target = tmbCloseState;
+        ring_digit.target = ringCloseState;
         ring.zDrive = ring_digit;
 
         // Set a small pause here to give the fingers a bit of time to close
