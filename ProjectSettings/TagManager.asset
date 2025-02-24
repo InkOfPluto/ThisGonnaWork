@@ -8,6 +8,11 @@ TagManager:
   - thumb0
   - thumb1
   - thumb2
+  - wrist
+  - idx
+  - tmb
+  - rng
+  - mid
   layers:
   - Default
   - TransparentFX

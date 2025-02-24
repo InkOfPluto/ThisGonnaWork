@@ -66,6 +66,10 @@ public class ArticulationDriver : MonoBehaviour
           (driverHand.transform.rotation * Vector3.back * driverHandOffset.x) +
           (driverHand.transform.rotation * Vector3.up * driverHandOffset.y)) - _palmBody.worldCenterOfMass;
 
+        // Force the robot arm only to move along the Y-Axis i.e. up-down axis to follow the user hand to make the task
+        // of picking up the object a little easier and focus the user on the haptic experience, rather than the grasping task. 
+        palmDelta = new Vector3(0f, palmDelta.y, 0f);
+
         // Setting velocity sets it on all the joints, adding a force only adds to root joint
         float alpha = 0.05f; // Blend between existing velocity and all new velocity
         _palmBody.velocity *= alpha;
@@ -86,38 +90,52 @@ public class ArticulationDriver : MonoBehaviour
         #endregion
 
         #region End-Effector Orienting
-        // Get the local axes
-        Vector3 endEffectorXAxis = _palmBody.transform.right; // Local x-axis
-        Vector3 driverHandZAxis = driverHand.forward;          // Local z-axis of driverHand
+        //// Get the local axes
+        //Vector3 endEffectorXAxis = _palmBody.transform.forward; // Local x-axis
+        //Vector3 driverHandZAxis = driverHand.forward;          // Local z-axis of driverHand
 
-        // Project the axes onto the plane perpendicular to the axis of rotation (local y-axis)
-        Vector3 rotationAxis = _palmBody.transform.up; // Axis of rotation (local y-axis)
+        //// Project the axes onto the plane perpendicular to the axis of rotation (local y-axis)
+        //Vector3 rotationAxis = _palmBody.transform.forward; // Axis of rotation (local y-axis)
 
-        Vector3 projectedEndEffectorX = Vector3.ProjectOnPlane(endEffectorXAxis, rotationAxis);
-        Vector3 projectedDriverHandZ = Vector3.ProjectOnPlane(driverHandZAxis, rotationAxis);
+        //Vector3 projectedEndEffectorX = Vector3.ProjectOnPlane(endEffectorXAxis, rotationAxis);
+        //Vector3 projectedDriverHandZ = Vector3.ProjectOnPlane(driverHandZAxis, rotationAxis);
 
-        // Calculate the angle between the projected vectors
-        float angleToRotate = Vector3.SignedAngle(projectedEndEffectorX, projectedDriverHandZ, rotationAxis);
+        //// Calculate the angle between the projected vectors
+        //float angleToRotate = Vector3.SignedAngle(projectedEndEffectorX, projectedDriverHandZ, rotationAxis);
 
+        //// Get the revolute joint (assuming it's the last in the array)
+        //ArticulationBody revoluteJoint = articulationBods[articulationBods.Length - 1];
 
+        //// Get the current drive
+        //ArticulationDrive drive = revoluteJoint.xDrive; // Assuming rotation around x-axis
 
-        // Get the revolute joint (assuming it's the last in the array)
-        ArticulationBody revoluteJoint = articulationBods[articulationBods.Length - 1];
+        //// Adjust the target angle
+        //drive.target = angleToRotate;
 
-        // Get the current drive
-        ArticulationDrive drive = revoluteJoint.xDrive; // Assuming rotation around x-axis
-
-        // Adjust the target angle
-        drive.target = angleToRotate;
-
-        // Apply the drive back to the joint
-        revoluteJoint.xDrive = drive;
+        //// Apply the drive back to the joint
+        //revoluteJoint.xDrive = drive;
 
 
-        // Adjust joint limits if necessary
-        drive.lowerLimit = Mathf.Min(drive.lowerLimit, angleToRotate);
-        drive.upperLimit = Mathf.Max(drive.upperLimit, angleToRotate);
-        revoluteJoint.xDrive = drive;
+        //// Adjust joint limits if necessary
+        //drive.lowerLimit = Mathf.Min(drive.lowerLimit, angleToRotate);
+        //drive.upperLimit = Mathf.Max(drive.upperLimit, angleToRotate);
+        ////revoluteJoint.xDrive = drive;
+
+        #endregion
+
+        #region End-Effector Orient Matching
+
+        ArticulationDrive drive_X = _palmBody.xDrive;
+        //ArticulationDrive drive_Y = _palmBody.yDrive;
+        //ArticulationDrive drive_Z = _palmBody.zDrive;
+
+        drive_X.target = driverHand.localRotation.eulerAngles.x;
+        //drive_Y.target = driverHand.localRotation.eulerAngles.y;
+        //drive_Z.target = driverHand.localRotation.eulerAngles.z;
+
+        _palmBody.xDrive = drive_X;
+        //_palmBody.yDrive = drive_Y;
+        //_palmBody.zDrive = drive_Z;
 
 
         #endregion
