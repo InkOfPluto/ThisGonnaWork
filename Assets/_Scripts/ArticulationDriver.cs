@@ -38,7 +38,13 @@ public class ArticulationDriver : MonoBehaviour
     [Range(-90f, 90f)]
     public float angle = 0f;
 
-
+    Vector3 RotationOffset = new Vector3(-30f, 0f, 0f);
+    Vector3 PositionOffset = new Vector3(0f, 0f, 0f); 
+    public float rotationGain = 150f;
+    float movementTime = 0.01f;
+    float velocityGain = 100f; 
+    float dampingFactor = 1f; 
+    
     void Start()
     {
         thisArticulation = GetComponent<ArticulationBody>();
@@ -47,9 +53,7 @@ public class ArticulationDriver : MonoBehaviour
 
     void FixedUpdate()
     {
-        #region End-Effector Positioning
-        // Counter Gravity; force = mass * acceleration
-        _palmBody.AddForce(-Physics.gravity * _palmBody.mass);
+        #region Position Control
         foreach (ArticulationBody body in articulationBods)
         {
             //int dofs = body.jointVelocity.dofCount;
@@ -60,33 +64,87 @@ public class ArticulationDriver : MonoBehaviour
             body.AddForce(-Physics.gravity * body.mass);
         }
 
-        // Apply tracking position velocity; force = (velocity * mass) / deltaTime
-        float massOfHand = _palmBody.mass; // + (N_FINGERS * N_ACTIVE_BONES * _perBoneMass);
-        Vector3 palmDelta = ((driverHand.transform.position + driverHandOffset) +
-          (driverHand.transform.rotation * Vector3.back * driverHandOffset.x) +
-          (driverHand.transform.rotation * Vector3.up * driverHandOffset.y)) - _palmBody.worldCenterOfMass;
+        // 0. Counter gravity 
+        _palmBody.AddForce(-Physics.gravity * _palmBody.mass);
 
-        // Force the robot arm only to move along the Y-Axis i.e. up-down axis to follow the user hand to make the task
-        // of picking up the object a little easier and focus the user on the haptic experience, rather than the grasping task. 
-        palmDelta = new Vector3(0f, palmDelta.y, 0f);
+        // 1. Position Control
+        Vector3 positionError = (driverHand.position + PositionOffset) - _palmBody.worldCenterOfMass;
 
-        // Setting velocity sets it on all the joints, adding a force only adds to root joint
-        float alpha = 0.05f; // Blend between existing velocity and all new velocity
-        _palmBody.velocity *= alpha;
-        _palmBody.AddForce(Vector3.ClampMagnitude((((palmDelta / Time.fixedDeltaTime) / Time.fixedDeltaTime) * (_palmBody.mass + (1f * 5))) * (1f - alpha), 8000f * 1f));
+        // Calculate desired velocity
+        Vector3 desiredVelocity = positionError / movementTime;
 
-        // Apply tracking rotation velocity 
-        // TODO: Compensate for phantom forces on strongly misrotated appendages
-        // AddTorque and AngularVelocity both apply to ALL the joints in the chain
-        Quaternion palmRot = _palmBody.transform.rotation * Quaternion.Euler(rotataionalOffset);
-        Quaternion rotation = driverHand.transform.rotation * Quaternion.Inverse(palmRot);
-        Vector3 angularVelocity = Vector3.ClampMagnitude((new Vector3(
-          Mathf.DeltaAngle(0, rotation.eulerAngles.x),
-          Mathf.DeltaAngle(0, rotation.eulerAngles.y),
-          Mathf.DeltaAngle(0, rotation.eulerAngles.z)) / Time.fixedDeltaTime) * Mathf.Deg2Rad, 45f * 1f);
+        // Calculate velocity difference
+        Vector3 velocityDifference = desiredVelocity - _palmBody.velocity;
 
-        _palmBody.angularVelocity = angularVelocity;
-        _palmBody.angularDamping = 0.5f;
+        // Apply force based on velocity difference
+        _palmBody.AddForce(velocityDifference * _palmBody.mass * velocityGain);
+
+        // Apply damping
+        _palmBody.AddForce(-_palmBody.velocity * dampingFactor * _palmBody.mass);
+        #endregion
+
+        #region End-Effector Positioning
+        //// Counter Gravity; force = mass * acceleration
+        //_palmBody.AddForce(-Physics.gravity * _palmBody.mass);
+        //foreach (ArticulationBody body in articulationBods)
+        //{
+        //    //int dofs = body.jointVelocity.dofCount;
+        //    float velLimit = 1.75f;
+        //    body.maxAngularVelocity = velLimit;
+        //    body.maxDepenetrationVelocity = 3f;
+
+        //    body.AddForce(-Physics.gravity * body.mass);
+        //}
+
+        //// Apply tracking position velocity; force = (velocity * mass) / deltaTime
+        //float massOfHand = _palmBody.mass; // + (N_FINGERS * N_ACTIVE_BONES * _perBoneMass);
+        //Vector3 palmDelta = ((driverHand.transform.position + driverHandOffset) +
+        //  (driverHand.transform.rotation * Vector3.back * driverHandOffset.x) +
+        //  (driverHand.transform.rotation * Vector3.up * driverHandOffset.y)) - _palmBody.worldCenterOfMass;
+
+        //// Force the robot arm only to move along the Y-Axis i.e. up-down axis to follow the user hand to make the task
+        //// of picking up the object a little easier and focus the user on the haptic experience, rather than the grasping task. 
+        //palmDelta = new Vector3(0f, palmDelta.y, 0f);
+
+        //// Setting velocity sets it on all the joints, adding a force only adds to root joint
+        //float alpha = 0.05f; // Blend between existing velocity and all new velocity
+        //_palmBody.velocity *= alpha;
+        //_palmBody.AddForce(Vector3.ClampMagnitude((((palmDelta / Time.fixedDeltaTime) / Time.fixedDeltaTime) * (_palmBody.mass + (1f * 5))) * (1f - alpha), 8000f * 1f));
+
+        //// Apply tracking rotation velocity 
+        //// TODO: Compensate for phantom forces on strongly misrotated appendages
+        //// AddTorque and AngularVelocity both apply to ALL the joints in the chain
+        //Quaternion palmRot = _palmBody.transform.rotation * Quaternion.Euler(rotataionalOffset);
+        //Quaternion rotation = driverHand.transform.rotation * Quaternion.Inverse(palmRot);
+        //Vector3 angularVelocity = Vector3.ClampMagnitude((new Vector3(
+        //  Mathf.DeltaAngle(0, rotation.eulerAngles.x),
+        //  Mathf.DeltaAngle(0, rotation.eulerAngles.y),
+        //  Mathf.DeltaAngle(0, rotation.eulerAngles.z)) / Time.fixedDeltaTime) * Mathf.Deg2Rad, 45f * 1f);
+
+        //_palmBody.angularVelocity = angularVelocity;
+        //_palmBody.angularDamping = 0.5f;
+        #endregion
+
+        #region Orientation Control
+        if (driverHand.gameObject.name.Contains("Palm"))
+        {
+            // 1. Compute target orientation with offset
+            Quaternion offsetQ = Quaternion.Euler(RotationOffset);
+            Quaternion desiredRotation = driverHand.rotation * offsetQ; // Apply offset to driver's rotation
+
+            // 2. Rotation Control
+            // Calculate rotation difference
+            Quaternion rotationDiff = desiredRotation * Quaternion.Inverse(_palmBody.transform.rotation);
+            rotationDiff.ToAngleAxis(out float angleDegrees, out Vector3 rotationAxis);
+
+            // Handle the case where angle = 0
+            if (Mathf.Approximately(angleDegrees, 0f)) return;
+
+            // Convert angle to radians and apply torque
+            float angleRadians = angleDegrees * Mathf.Deg2Rad;
+            Vector3 torque = rotationAxis.normalized * (angleRadians * rotationGain);
+            _palmBody.AddTorque(torque, ForceMode.Force);
+        }
         #endregion
 
         #region End-Effector Orienting
@@ -124,20 +182,17 @@ public class ArticulationDriver : MonoBehaviour
         #endregion
 
         #region End-Effector Orient Matching
+        //ArticulationDrive drive_X = _palmBody.xDrive;
+        ////ArticulationDrive drive_Y = _palmBody.yDrive;
+        ////ArticulationDrive drive_Z = _palmBody.zDrive;
 
-        ArticulationDrive drive_X = _palmBody.xDrive;
-        //ArticulationDrive drive_Y = _palmBody.yDrive;
-        //ArticulationDrive drive_Z = _palmBody.zDrive;
+        //drive_X.target = driverHand.localRotation.eulerAngles.x;
+        ////drive_Y.target = driverHand.localRotation.eulerAngles.y;
+        ////drive_Z.target = driverHand.localRotation.eulerAngles.z;
 
-        drive_X.target = driverHand.localRotation.eulerAngles.x;
-        //drive_Y.target = driverHand.localRotation.eulerAngles.y;
-        //drive_Z.target = driverHand.localRotation.eulerAngles.z;
-
-        _palmBody.xDrive = drive_X;
-        //_palmBody.yDrive = drive_Y;
-        //_palmBody.zDrive = drive_Z;
-
-
+        //_palmBody.xDrive = drive_X;
+        ////_palmBody.yDrive = drive_Y;
+        ////_palmBody.zDrive = drive_Z;
         #endregion
 
         // This is due to Unity bug. And I am mitigating it here. 

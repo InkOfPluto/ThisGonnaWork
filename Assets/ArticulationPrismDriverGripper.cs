@@ -54,7 +54,6 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
 
     private void Update()
     {
-
         // Get distances between fingertips and the palm for open and closed hand states
         if (Input.GetKeyDown(KeyCode.O))
         {
@@ -75,49 +74,48 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
     {
         if (start)
         {
-
-            if (physicsObjects[4] == null || driverObjects == null) return;
+            //if (physicsObjects[4] == null || driverObjects == null) return;
 
             #region Orientation Control
-            if (driverObjects.gameObject.name.Contains("Palm"))
-            {
-                // 1. Compute target orientation with offset
-                Quaternion offsetQ = Quaternion.Euler(RotationOffset);
-                Quaternion desiredRotation = driverObjects.rotation * offsetQ; // Apply offset to driver's rotation
+            //if (driverObjects.gameObject.name.Contains("Palm"))
+            //{
+            //    // 1. Compute target orientation with offset
+            //    Quaternion offsetQ = Quaternion.Euler(RotationOffset);
+            //    Quaternion desiredRotation = driverObjects.rotation * offsetQ; // Apply offset to driver's rotation
 
-                // 2. Rotation Control
-                // Calculate rotation difference
-                Quaternion rotationDiff = desiredRotation * Quaternion.Inverse(physicsObjects[4].transform.rotation);
-                rotationDiff.ToAngleAxis(out float angleDegrees, out Vector3 rotationAxis);
+            //    // 2. Rotation Control
+            //    // Calculate rotation difference
+            //    Quaternion rotationDiff = desiredRotation * Quaternion.Inverse(physicsObjects[4].transform.rotation);
+            //    rotationDiff.ToAngleAxis(out float angleDegrees, out Vector3 rotationAxis);
 
-                // Handle the case where angle = 0
-                if (Mathf.Approximately(angleDegrees, 0f)) return;
+            //    // Handle the case where angle = 0
+            //    if (Mathf.Approximately(angleDegrees, 0f)) return;
 
-                // Convert angle to radians and apply torque
-                float angleRadians = angleDegrees * Mathf.Deg2Rad;
-                Vector3 torque = rotationAxis.normalized * (angleRadians * rotationGain);
-                physicsObjects[4].AddTorque(torque, ForceMode.Force);
-            }
+            //    // Convert angle to radians and apply torque
+            //    float angleRadians = angleDegrees * Mathf.Deg2Rad;
+            //    Vector3 torque = rotationAxis.normalized * (angleRadians * rotationGain);
+            //    physicsObjects[4].AddTorque(torque, ForceMode.Force);
+            //}
             #endregion
 
             #region Position Control
-            // 0. Counter gravity 
-            physicsObjects[4].AddForce(-Physics.gravity * physicsObjects[4].mass);
+            //// 0. Counter gravity 
+            //physicsObjects[4].AddForce(-Physics.gravity * physicsObjects[4].mass);
 
-            // 1. Position Control
-            Vector3 positionError = (driverObjects.position + PositionOffset) - physicsObjects[4].worldCenterOfMass;
+            //// 1. Position Control
+            //Vector3 positionError = (driverObjects.position + PositionOffset) - physicsObjects[4].worldCenterOfMass;
 
-            // Calculate desired velocity
-            Vector3 desiredVelocity = positionError / movementTime;
+            //// Calculate desired velocity
+            //Vector3 desiredVelocity = positionError / movementTime;
 
-            // Calculate velocity difference
-            Vector3 velocityDifference = desiredVelocity - physicsObjects[4].velocity;
+            //// Calculate velocity difference
+            //Vector3 velocityDifference = desiredVelocity - physicsObjects[4].velocity;
 
-            // Apply force based on velocity difference
-            physicsObjects[4].AddForce(velocityDifference * physicsObjects[4].mass * velocityGain);
+            //// Apply force based on velocity difference
+            //physicsObjects[4].AddForce(velocityDifference * physicsObjects[4].mass * velocityGain);
 
-            // Apply damping
-            physicsObjects[4].AddForce(-physicsObjects[4].velocity * dampingFactor * physicsObjects[4].mass);
+            //// Apply damping
+            //physicsObjects[4].AddForce(-physicsObjects[4].velocity * dampingFactor * physicsObjects[4].mass);
             #endregion
 
             Grip();
