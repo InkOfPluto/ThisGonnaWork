@@ -5,7 +5,7 @@ using UnityEngine;
 public class ArticulationPrismDriverGripper : MonoBehaviour
 {
 
-    public Transform[] driverObjects;
+    public Transform driverObjects;
     private ArticulationBody[] physicsObjects;
 
     [Header("Control Parameters")]
@@ -23,135 +23,151 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
 
 
     // Close states for the mapping function, not sure about the value might have to think about it again.
-    public ArticulationBody tmb, index, mid, ring;
-    float tmbCloseState = 0.05f;
-    float indexCloseState = 0.05f;
-    float midCloseState = 0.05f;
-    float ringCloseState = 0.05f;
+    //public ArticulationBody tmb, index, mid, ring;
+    float tmbCloseState = 0.5f;
+    float indexCloseState = 0.5f;
+    float midCloseState = 0.5f;
+    float ringCloseState = 0.5f;
 
-    bool start; 
+    float[] fingerOpenState, fingerClosedState = new float[5] { 1f, 1f, 1f, 1f, 1f };
+
+    bool start;
 
     private void Start()
     {
-        physicsObjects = new ArticulationBody[5]; 
-        Invoke("FindGripper", 1f); 
+        fingerOpenState = new float[5] { 1f, 1f, 1f, 1f, 1f };
+        fingerClosedState = new float[5] { 1f, 1f, 1f, 1f, 1f };
+
+        physicsObjects = new ArticulationBody[6];
+        Invoke("FindGripper", 1f);
     }
 
     // Do we assign these to the robot wrist digits on the prefab? They currently are unassigned in Unity
     void FindGripper()
     {
-        physicsObjects[0] = GameObject.FindWithTag("wrist").GetComponent<ArticulationBody>();
-        physicsObjects[1] = GameObject.FindWithTag("tmb").GetComponent<ArticulationBody>();
-        physicsObjects[2] = GameObject.FindWithTag("idx").GetComponent<ArticulationBody>();
-        physicsObjects[3] = GameObject.FindWithTag("mid").GetComponent<ArticulationBody>();
-        physicsObjects[4] = GameObject.FindWithTag("rng").GetComponent<ArticulationBody>();
+        physicsObjects[0] = GameObject.FindWithTag("tmb").GetComponent<ArticulationBody>();
+        physicsObjects[1] = GameObject.FindWithTag("idx").GetComponent<ArticulationBody>();
+        physicsObjects[2] = GameObject.FindWithTag("mid").GetComponent<ArticulationBody>();
+        physicsObjects[3] = GameObject.FindWithTag("rng").GetComponent<ArticulationBody>();
+        physicsObjects[4] = GameObject.FindWithTag("wrist").GetComponent<ArticulationBody>();
+    }
 
-        start = true; 
+    private void Update()
+    {
+
+        // Get distances between fingertips and the palm for open and closed hand states
+        if (Input.GetKeyDown(KeyCode.O))
+        {
+            fingerOpenState = GetVRFingerState();
+        }
+        if (Input.GetKeyDown(KeyCode.C))
+        {
+            fingerClosedState = GetVRFingerState();
+            start = true;
+        }
+
+        //float vrThumbValue = Vector3.Distance(thumbTip.transform.position, palm.transform.position);
+        //print("Thumb: " + vrThumbValue);
+
     }
 
     void FixedUpdate()
     {
         if (start)
         {
-            for (int i = 0; i < driverObjects.Length; i++)
+
+            if (physicsObjects[4] == null || driverObjects == null) return;
+
+            #region Orientation Control
+            if (driverObjects.gameObject.name.Contains("Palm"))
             {
-                if (physicsObjects[i] == null || driverObjects[i] == null) return;
+                // 1. Compute target orientation with offset
+                Quaternion offsetQ = Quaternion.Euler(RotationOffset);
+                Quaternion desiredRotation = driverObjects.rotation * offsetQ; // Apply offset to driver's rotation
 
-                #region Orientation Control
-                if (driverObjects[i].gameObject.name.Contains("Palm"))
-                {
-                    // 1. Compute target orientation with offset
-                    Quaternion offsetQ = Quaternion.Euler(RotationOffset);
-                    Quaternion desiredRotation = driverObjects[i].rotation * offsetQ; // Apply offset to driver's rotation
+                // 2. Rotation Control
+                // Calculate rotation difference
+                Quaternion rotationDiff = desiredRotation * Quaternion.Inverse(physicsObjects[4].transform.rotation);
+                rotationDiff.ToAngleAxis(out float angleDegrees, out Vector3 rotationAxis);
 
-                    // 2. Rotation Control
-                    // Calculate rotation difference
-                    Quaternion rotationDiff = desiredRotation * Quaternion.Inverse(physicsObjects[i].transform.rotation);
-                    rotationDiff.ToAngleAxis(out float angleDegrees, out Vector3 rotationAxis);
+                // Handle the case where angle = 0
+                if (Mathf.Approximately(angleDegrees, 0f)) return;
 
-                    // Handle the case where angle = 0
-                    if (Mathf.Approximately(angleDegrees, 0f)) return;
-
-                    // Convert angle to radians and apply torque
-                    float angleRadians = angleDegrees * Mathf.Deg2Rad;
-                    Vector3 torque = rotationAxis.normalized * (angleRadians * rotationGain);
-                    physicsObjects[i].AddTorque(torque, ForceMode.Force);
-                }
-                #endregion
-
-                #region Position Control
-                // 0. Counter gravity 
-                physicsObjects[i].AddForce(-Physics.gravity * physicsObjects[i].mass);
-
-                // 1. Position Control
-                Vector3 positionError = (driverObjects[i].position + PositionOffset) - physicsObjects[i].worldCenterOfMass;
-
-                // Calculate desired velocity
-                Vector3 desiredVelocity = positionError / movementTime;
-
-                // Calculate velocity difference
-                Vector3 velocityDifference = desiredVelocity - physicsObjects[i].velocity;
-
-                // Apply force based on velocity difference
-                physicsObjects[i].AddForce(velocityDifference * physicsObjects[i].mass * velocityGain);
-
-                // Apply damping
-                physicsObjects[i].AddForce(-physicsObjects[i].velocity * dampingFactor * physicsObjects[i].mass);
-                #endregion
+                // Convert angle to radians and apply torque
+                float angleRadians = angleDegrees * Mathf.Deg2Rad;
+                Vector3 torque = rotationAxis.normalized * (angleRadians * rotationGain);
+                physicsObjects[4].AddTorque(torque, ForceMode.Force);
             }
+            #endregion
 
+            #region Position Control
+            // 0. Counter gravity 
+            physicsObjects[4].AddForce(-Physics.gravity * physicsObjects[4].mass);
 
-            Grip(); 
+            // 1. Position Control
+            Vector3 positionError = (driverObjects.position + PositionOffset) - physicsObjects[4].worldCenterOfMass;
 
+            // Calculate desired velocity
+            Vector3 desiredVelocity = positionError / movementTime;
+
+            // Calculate velocity difference
+            Vector3 velocityDifference = desiredVelocity - physicsObjects[4].velocity;
+
+            // Apply force based on velocity difference
+            physicsObjects[4].AddForce(velocityDifference * physicsObjects[4].mass * velocityGain);
+
+            // Apply damping
+            physicsObjects[4].AddForce(-physicsObjects[4].velocity * dampingFactor * physicsObjects[4].mass);
+            #endregion
+
+            Grip();
         }
     }
 
     void Grip()
     {
-        float vrThumbValue = GetVRThumbValue();
-        float vrIndexValue = GetVRIndexValue();
-        float vrMiddleValue = GetVRMiddleValue();
-        float vrRingValue = GetVRRingValue();
 
         // 1. Finger A and B to close on the object (to finger close state) 
-        ArticulationDrive thumb_digit = physicsObjects[1].yDrive;
-        thumb_digit.target = mapThumb(vrThumbValue, 0f, 1f, tmbCloseState, 0f); // Replaced the zero value with this, does it make sense?
-        physicsObjects[1].yDrive = thumb_digit;
+        ArticulationDrive thumb_digit = physicsObjects[0].yDrive;
+        float vrThumbValue = Vector3.Distance(thumbTip.transform.position, palm.transform.position);
+        float thumbTarget = map(vrThumbValue, fingerOpenState[0], fingerClosedState[0], 0f, tmbCloseState);
+        print("Thumb Target: " + thumbTarget);
+        thumb_digit.target = thumbTarget;
+        physicsObjects[0].yDrive = thumb_digit;
 
-        ArticulationDrive index_digit = physicsObjects[2].yDrive;
-        index_digit.target = mapIndex(vrIndexValue, 0f, 1f, indexCloseState, 0f);
-        physicsObjects[2].yDrive = index_digit;
+        ArticulationDrive index_digit = physicsObjects[1].yDrive;
+        float vrIndexValue = Vector3.Distance(indexTip.transform.position, palm.transform.position);
+        index_digit.target = map(vrIndexValue, fingerOpenState[1], fingerClosedState[1], 0f, indexCloseState);
+        physicsObjects[1].yDrive = index_digit;
 
-        ArticulationDrive mid_digit = physicsObjects[3].zDrive;
-        mid_digit.target = mapRing(vrMiddleValue, 0f, 1f, midCloseState, 0f);
-        physicsObjects[3].zDrive = mid_digit;
+        ArticulationDrive mid_digit = physicsObjects[2].yDrive;
+        float vrMidValue = Vector3.Distance(midTip.transform.position, palm.transform.position);
+        mid_digit.target = map(vrMidValue, fingerOpenState[2], fingerClosedState[2], 0f, midCloseState);
+        physicsObjects[2].yDrive = mid_digit;
 
-        ArticulationDrive ring_digit = physicsObjects[4].zDrive;
-        ring_digit.target = mapRing(vrRingValue, 0f, 1f, ringCloseState, 0f);
-        physicsObjects[4].zDrive = ring_digit;
+        ArticulationDrive rng_digit = physicsObjects[3].yDrive;
+        float vrRngValue = Vector3.Distance(ringTip.transform.position, palm.transform.position);
+        rng_digit.target = map(vrRngValue, fingerOpenState[3], fingerClosedState[3], 0f, ringCloseState);
+        physicsObjects[3].yDrive = rng_digit;
     }
 
     // Placeholder to get VR finger values: I added in the tip gameObjects for reach finger in order to get their relative value to the palm, not sure how to implement this.
-    private float GetVRThumbValue() { return 0.5f; }
-    private float GetVRIndexValue() { return 0.5f; }
-    private float GetVRMiddleValue() { return 0.5f; }
-    private float GetVRRingValue() { return 0.5f; }
+    private float[] GetVRFingerState()
+    {
+        float[] fingerstate = new float[5];
+
+        fingerstate[0] = Vector3.Distance(thumbTip.transform.position, palm.transform.position);
+        fingerstate[1] = Vector3.Distance(indexTip.transform.position, palm.transform.position);
+        fingerstate[2] = Vector3.Distance(midTip.transform.position, palm.transform.position);
+        fingerstate[3] = Vector3.Distance(ringTip.transform.position, palm.transform.position);
+        fingerstate[4] = fingerstate[0] + fingerstate[1] + fingerstate[2] + fingerstate[3];
+
+        return fingerstate;
+    }
 
 
     // Mapping function to get the value between 0 and 1.
-    public static float mapIndex(float value, float leftMin, float leftMax, float rightMin, float rightMax)
-    {
-        return rightMin + (value - leftMin) * (rightMax - rightMin) / (leftMax - leftMin);
-    }
-    public static float mapMiddle(float value, float leftMin, float leftMax, float rightMin, float rightMax)
-    {
-        return rightMin + (value - leftMin) * (rightMax - rightMin) / (leftMax - leftMin);
-    }
-    public static float mapRing(float value, float leftMin, float leftMax, float rightMin, float rightMax)
-    {
-        return rightMin + (value - leftMin) * (rightMax - rightMin) / (leftMax - leftMin);
-    }
-    public static float mapThumb(float value, float leftMin, float leftMax, float rightMin, float rightMax)
+    public static float map(float value, float leftMin, float leftMax, float rightMin, float rightMax)
     {
         return rightMin + (value - leftMin) * (rightMax - rightMin) / (leftMax - leftMin);
     }
