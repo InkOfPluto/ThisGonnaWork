@@ -4,22 +4,23 @@ using UnityEngine;
 using System.IO.Ports;
 using Unity.VisualScripting;
 
-public class SlipRenderer : MonoBehaviour
+public class SlipSequence : MonoBehaviour
 {
-    private SerialPort serial1 = new SerialPort("COM3", 115200);
-    private SerialPort serial2 = new SerialPort("COM4", 115200);
+    public string Comport1, Comport2; 
+    private SerialPort serial1;
+    private SerialPort serial2;
 
     public GameObject targetCube, offsetMass;
-    public ArticulationBody shoulderLink;
+    //public ArticulationBody shoulderLink;
     public ArticulationBody tmb, index, mid, ring;
     public float graspDepth = 30f;
 
     public float targetGrasperHeight = 19;
 
-    float tmbCloseState = 0.05f; 
-    float indexCloseState = -0.05f; 
-    float middleCloseState = -0.05f; 
-    float ringCloseState = 0.05f; 
+    float tmbCloseState = 0.05f;
+    float indexCloseState = -0.05f;
+    float middleCloseState = -0.05f;
+    float ringCloseState = 0.05f;
 
     Coroutine graspholdRoutine;
 
@@ -38,6 +39,9 @@ public class SlipRenderer : MonoBehaviour
 
         try
         {
+            serial1 = new SerialPort(Comport1, 115200);
+            serial2 = new SerialPort(Comport2, 115200);
+
             serial1.Open();
             serial2.Open();
         }
@@ -58,14 +62,14 @@ public class SlipRenderer : MonoBehaviour
         }
 
         //Mapping VR fingers to digits
-        float vrThumbValue = GetVRThumbValue(); 
+        float vrThumbValue = GetVRThumbValue();
         float vrIndexValue = GetVRIndexValue();
         float vrMiddleValue = GetVRMiddleValue();
         float vrRingValue = GetVRRingValue();
 
         ArticulationDrive thumbDrive = tmb.yDrive;
         thumbDrive.target = mapThumb(vrThumbValue, 0f, 1f, tmbCloseState, 0f);
-        tmb.yDrive = thumbDrive;   
+        tmb.yDrive = thumbDrive;
 
         ArticulationDrive indexDrive = index.yDrive;
         indexDrive.target = mapIndex(vrIndexValue, 0f, 1f, indexCloseState, 0f);
@@ -130,9 +134,9 @@ public class SlipRenderer : MonoBehaviour
         ring_digit.target = 0f;
         ring.zDrive = ring_digit;
 
-        ArticulationDrive drive_shoulder = shoulderLink.xDrive; // Assuming rotation around x-axis
-        drive_shoulder.target = graspDepth;
-        shoulderLink.xDrive = drive_shoulder;
+        //ArticulationDrive drive_shoulder = shoulderLink.xDrive; // Assuming rotation around x-axis
+        //drive_shoulder.target = graspDepth;
+        //shoulderLink.xDrive = drive_shoulder;
 
         yield return new WaitForSeconds(1f);
 
@@ -174,10 +178,10 @@ public class SlipRenderer : MonoBehaviour
         // Set a small pause here to give the fingers a bit of time to close
         yield return new WaitForSeconds(1f);
 
-        // 2. Want shoulder link to lift up to a given target height (targetGrasperHeight)
-        drive_shoulder = shoulderLink.xDrive; // Assuming rotation around x-axis
-        drive_shoulder.target = targetGrasperHeight;
-        shoulderLink.xDrive = drive_shoulder;
+        //// 2. Want shoulder link to lift up to a given target height (targetGrasperHeight)
+        //drive_shoulder = shoulderLink.xDrive; // Assuming rotation around x-axis
+        //drive_shoulder.target = targetGrasperHeight;
+        //shoulderLink.xDrive = drive_shoulder;
 
         // Set a small pause here to give the arm a bit of time to lift up 
         yield return new WaitForSeconds(1f);

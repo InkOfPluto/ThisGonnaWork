@@ -1,9 +1,20 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.IO.Ports;
+//using Unity.VisualScripting;
 
 public class ArticulationPrismDriverGripper : MonoBehaviour
 {
+    [Header("Slip Parameters")]
+    public string Comport1;
+    public string Comport2;
+    private SerialPort serial1;
+    private SerialPort serial2;
+    public GameObject targetCube, offsetMass;
+    float originalMass = 0f; 
+    public float targetOffsetMass = 2f;
+    public float targetHeight = 1.05f; 
 
     public Transform driverObjects;
     private ArticulationBody[] physicsObjects;
@@ -33,13 +44,30 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
 
     bool start;
 
+    Coroutine renderSequence, sendSerialSequence; 
+
     private void Start()
     {
+        originalMass = offsetMass.GetComponent<Rigidbody>().mass;
+
         fingerOpenState = new float[5] { 1f, 1f, 1f, 1f, 1f };
         fingerClosedState = new float[5] { 1f, 1f, 1f, 1f, 1f };
 
         physicsObjects = new ArticulationBody[6];
         Invoke("FindGripper", 1f);
+
+
+        try
+        {
+            serial1 = new SerialPort(Comport1, 115200);
+            serial2 = new SerialPort(Comport2, 115200);
+
+            serial1.Open();
+            serial2.Open();
+        }
+        catch { print("Something went wrong!"); }
+
+        renderSequence = StartCoroutine(RenderSlip());
     }
 
     // Do we assign these to the robot wrist digits on the prefab? They currently are unassigned in Unity
@@ -67,7 +95,6 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
 
         //float vrThumbValue = Vector3.Distance(thumbTip.transform.position, palm.transform.position);
         //print("Thumb: " + vrThumbValue);
-
     }
 
     void FixedUpdate()
@@ -124,12 +151,11 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
 
     void Grip()
     {
-
         // 1. Finger A and B to close on the object (to finger close state) 
         ArticulationDrive thumb_digit = physicsObjects[0].yDrive;
         float vrThumbValue = Vector3.Distance(thumbTip.transform.position, palm.transform.position);
         float thumbTarget = map(vrThumbValue, fingerOpenState[0], fingerClosedState[0], 0f, tmbCloseState);
-        print("Thumb Target: " + thumbTarget);
+        //print("Thumb Target: " + thumbTarget);
         thumb_digit.target = thumbTarget;
         physicsObjects[0].yDrive = thumb_digit;
 
@@ -163,6 +189,42 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         return fingerstate;
     }
 
+
+    IEnumerator RenderSlip()
+    {
+        print("Staring render sequence!!");
+        offsetMass.GetComponent<Rigidbody>().mass = originalMass;
+
+        // If we reach the target height, trigger the cube falling sequence through the offset mass
+        while (targetCube.transform.position.y < targetHeight)
+        {
+            yield return null; 
+        }
+
+        print("Star increasing the mass!!");
+        // Increase the offset mass (later also change the offset mass location) 
+        while (offsetMass.GetComponent<Rigidbody>().mass < targetOffsetMass)
+        {
+            offsetMass.GetComponent<Rigidbody>().mass += 1f;
+
+            if (targetCube.GetComponent<Rigidbody>().velocity.y < -0.15f)
+            {
+                try
+                {
+                    serial1.WriteLine("fgfgbnbn");
+                    serial2.WriteLine("fgfgbnbn");
+                    Debug.Log("Slipping!");
+                    break;
+                }
+                catch { print("Something went wrong!"); }
+            }
+
+            yield return null;
+        }
+        yield return null;
+
+
+    }
 
     // Mapping function to get the value between 0 and 1.
     public static float map(float value, float leftMin, float leftMax, float rightMin, float rightMax)
