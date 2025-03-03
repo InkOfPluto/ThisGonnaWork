@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.IO.Ports;
-using TMPro; 
+using TMPro;
 //using Unity.VisualScripting;
 
 public class ArticulationPrismDriverGripper : MonoBehaviour
@@ -12,11 +12,11 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
     public string Comport2;
     private SerialPort serial1;
     private SerialPort serial2;
-    public GameObject TargetObj, offsetMassObj; 
+    public GameObject TargetObj, offsetMassObj;
     private GameObject targetCube, offsetMass;
     float originalMass = 0f;
     public float targetOffsetMass = 2f;
-    public float targetHeight = 1.05f;
+    public Transform targetHeight;
     private Vector3 velocity = SlipDetector.vel;
 
     public Transform driverObjects;
@@ -38,7 +38,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
     // Tip gameObjects for calculating the relative distance from tip to palm, let me know what you think.
     public GameObject thumbTip, indexTip, midTip, ringTip, palm;
 
-    public TMPro.TMP_Text instructions; 
+    public TMPro.TMP_Text instructions;
 
     // Close states for the mapping function, not sure about the value might have to think about it again.
     //public ArticulationBody tmb, index, mid, ring;
@@ -52,7 +52,12 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
     bool start, ready;
 
     Coroutine renderSequence, sendSerialSequence;
-    public float dropForce = 100f; 
+    public float dropForce = 100f;
+
+    private float[] averageVel = new float[100];
+    private float meanVel = 0f;
+    private int k = 0;
+    int trial = -1; 
 
     private void Start()
     {
@@ -66,6 +71,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         physicsObjects = new ArticulationBody[6];
         Invoke("FindGripper", 1f);
 
+        averageVel = new float[100];
 
         try
         {
@@ -76,18 +82,23 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
             serial2.Open();
         }
         catch { print("Something went wrong!"); }
-
-        renderSequence = StartCoroutine(RenderSlip());
     }
 
     // Do we assign these to the robot wrist digits on the prefab? They currently are unassigned in Unity
     void FindGripper()
     {
-        physicsObjects[0] = GameObject.FindWithTag("tmb").GetComponent<ArticulationBody>();
-        physicsObjects[1] = GameObject.FindWithTag("idx").GetComponent<ArticulationBody>();
-        physicsObjects[2] = GameObject.FindWithTag("mid").GetComponent<ArticulationBody>();
-        physicsObjects[3] = GameObject.FindWithTag("rng").GetComponent<ArticulationBody>();
-        physicsObjects[4] = GameObject.FindWithTag("wrist").GetComponent<ArticulationBody>();
+        try
+        {
+            physicsObjects[0] = GameObject.FindWithTag("tmb").GetComponent<ArticulationBody>();
+            physicsObjects[1] = GameObject.FindWithTag("idx").GetComponent<ArticulationBody>();
+            physicsObjects[2] = GameObject.FindWithTag("mid").GetComponent<ArticulationBody>();
+            physicsObjects[3] = GameObject.FindWithTag("rng").GetComponent<ArticulationBody>();
+            physicsObjects[4] = GameObject.FindWithTag("wrist").GetComponent<ArticulationBody>();
+        }
+        catch
+        {
+            print("Robot gripper not available!"); 
+        }
     }
 
     private void Update()
@@ -104,13 +115,13 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         }
         if (Input.GetKeyDown(KeyCode.R))
         {
-            ready = true;
+            trial++; 
 
             if (targetCube != null)
             {
                 Destroy(targetCube);
             }
-            if(offsetMass!=null)
+            if (offsetMass != null)
             {
                 Destroy(offsetMass);
             }
@@ -122,11 +133,37 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
             targetCube.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
             originalPosition = targetCube.transform.position;
             originalRotation = targetCube.transform.rotation;
-            //originalOffsetRotation = offsetMass.transform.rotation;
-            //originalOffsetPosition = offsetMass.transform.position;
+
+            if (renderSequence != null)
+            {
+                StopCoroutine(renderSequence);
+            }
+            renderSequence = StartCoroutine(RenderSlip());
         }
         //float vrThumbValue = Vector3.Distance(thumbTip.transform.position, palm.transform.position);
         //print("Thumb: " + vrThumbValue);
+
+        // Get an average velocity measure and use that instead of current velocity
+        if(targetCube!=null)
+        {
+            averageVel[k] = targetCube.GetComponent<Rigidbody>().velocity.y;
+            k++;
+            if (k >= 5)
+            {
+                float sumVel = 0;
+                foreach (float vel in averageVel)
+                {
+                    sumVel += vel;
+                }
+                meanVel = sumVel / 5f;
+
+                k = 0;
+            }
+        }
+        else
+        {
+            meanVel = 0f; 
+        }
     }
 
     void FixedUpdate()
@@ -223,95 +260,56 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
 
     IEnumerator RenderSlip()
     {
-        float meanVel = 0; 
-        float[] averageVel = new float[100];
-        int k = 0; 
+        targetHeight.GetComponent<MeshRenderer>().enabled = true;
 
         // Another loop for blocks (blocks with haptics and without) 
-        for (int i = 0; i < 21; i++)
+        instructions.text = "Lift object and hold for 5 seconds. Trial: " + trial;
+
+        // If we reach the target height, trigger the cube falling sequence through the offset mass
+        while (targetCube.transform.position.y < targetHeight.position.y)
         {
-
-            while(!ready)
-            {
-                yield return null;
-            }
-            ready = false;
-            
-            print("Starting render sequence!!");
-
-            instructions.text = "Lift object and hold for 5 seconds. Trial: " + i; 
-
-            // If we reach the target height, trigger the cube falling sequence through the offset mass
-            while (targetCube.transform.position.y < targetHeight)
-            {
-                yield return null;
-            }
-          
-            float startTime = Time.time;
-            float holdTime = 2.5f; // Hold for 5 seconds
-            float holdAtHeightTime = 0f; 
-
-            while (holdAtHeightTime < holdTime)
-            {
-                if(targetCube.transform.position.y >= targetHeight)
-                {
-                    holdAtHeightTime += Time.deltaTime;
-                    instructions.text = "Hold time: " + holdAtHeightTime.ToString("F3") + "/ 2.5 seconds \n"+ "Trial: " + i;
-                }
-                else
-                {
-                    holdAtHeightTime = 0f; 
-                }    
-                yield return null;
-            }
-
-            instructions.text = "Object should be falling. Trial: " + i;
-            dropForce = 0;
-            print("Start increasing the mass!!");
-            // Increase the offset mass (later also change the offset mass location) 
-            while (targetCube.GetComponent<Rigidbody>().mass < targetOffsetMass)
-            {
-                //targetCube.GetComponent<Rigidbody>().mass += 0.5f;
-                //targetCube.GetComponent<Rigidbody>().angularVelocity = new Vector3(0f,0f,10f); 
-                dropForce -= 0.25f;
-                float xRand = Random.Range(-0.15f, 0.15f);
-                float zRand = Random.Range(-0.15f, 0.15f);
-                Vector3 offsetPos = new Vector3(transform.position.x + xRand, transform.position.y, transform.position.z + zRand);
-                targetCube.GetComponent<Rigidbody>().AddForceAtPosition(new Vector3(0f, dropForce, 0f), targetCube.transform.position + offsetPos, ForceMode.Impulse);
-
-                // Get an average velocity measure and use that instead of current velocity
-                averageVel[k] = targetCube.GetComponent<Rigidbody>().velocity.y;
-
-                k++; 
-                if(k>= 100)
-                {
-                    float sumVel = 0; 
-                    foreach(float vel in averageVel)
-                    {
-                        sumVel += vel; 
-                    }
-                    meanVel = sumVel / 100f;
-
-                    k = 0;
-                }
-
-                print("Average vel: " + meanVel); 
-
-                if (meanVel < -0.1f)
-                {
-                    try
-                    {
-                        SlipMethod1();
-                        break;
-                    }
-                    catch { print("Something went wrong!"); }
-                }
-                targetCube.GetComponent<Rigidbody>().velocity = Vector3.zero;
-                targetCube.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
-                yield return null;
-            }
-            targetCube.GetComponent<Rigidbody>().angularVelocity = new Vector3(0f, 0f, 0f);
+            yield return null;
         }
+
+        float startTime = Time.time;
+        float holdTime = 2.5f; // Hold for 5 seconds
+        float holdAtHeightTime = 0f;
+
+        while (holdAtHeightTime < holdTime)
+        {
+            if (targetCube.transform.position.y >= targetHeight.position.y)
+            {
+                holdAtHeightTime += Time.deltaTime;
+                instructions.text = "Hold time: " + holdAtHeightTime.ToString("F3") + "/ 2.5 seconds \n" + "Trial: " + trial;
+                targetHeight.GetComponent<MeshRenderer>().enabled = false; 
+            }
+            else
+            {
+                holdAtHeightTime = 0f;
+                targetHeight.GetComponent<MeshRenderer>().enabled = true;
+            }
+            yield return null;
+        }
+
+        instructions.text = "Increase object downward force. Trial: " + trial;
+        dropForce = 0;
+        // Increase the offset mass (later also change the offset mass location) 
+        while (targetCube.transform.position.y > targetHeight.transform.position.y) // Corrected this away from mass and velocity and use the height of the target object instead 
+        {
+            //targetCube.GetComponent<Rigidbody>().mass += 0.5f;
+            //targetCube.GetComponent<Rigidbody>().angularVelocity = new Vector3(0f,0f,10f); 
+            dropForce -= 0.25f;
+            float xRand = Random.Range(-0.15f, 0.15f);
+            float zRand = Random.Range(-0.15f, 0.15f);
+            Vector3 offsetPos = new Vector3(transform.position.x + xRand, transform.position.y, transform.position.z + zRand);
+            targetCube.GetComponent<Rigidbody>().AddForceAtPosition(new Vector3(0f, dropForce, 0f), targetCube.transform.position + offsetPos, ForceMode.Impulse);
+            yield return null;
+        }
+
+        targetCube.GetComponent<Rigidbody>().velocity = Vector3.zero;
+        targetCube.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
+
+        SlipMethod1();
         yield return null;
     }
 
