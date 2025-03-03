@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.IO.Ports;
+using TMPro; 
 //using Unity.VisualScripting;
 
 public class ArticulationPrismDriverGripper : MonoBehaviour
@@ -11,10 +12,12 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
     public string Comport2;
     private SerialPort serial1;
     private SerialPort serial2;
-    public GameObject targetCube, offsetMass;
-    float originalMass = 0f; 
+    public GameObject TargetObj, offsetMassObj; 
+    private GameObject targetCube, offsetMass;
+    float originalMass = 0f;
     public float targetOffsetMass = 2f;
-    public float targetHeight = 1.05f; 
+    public float targetHeight = 1.05f;
+    private Vector3 velocity = SlipDetector.vel;
 
     public Transform driverObjects;
     private ArticulationBody[] physicsObjects;
@@ -26,12 +29,16 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
     public float dampingFactor = 0.1f;     // Adjust this value for desired smoothness
     public float movementTime = 0.1f; // Adjust this value based on your needs
 
+    Quaternion originalRotation, originalOffsetRotation;
+    Vector3 originalPosition = new Vector3();
+    Vector3 originalOffsetPosition = new Vector3();
     public Vector3 RotationOffset = new Vector3();
     public Vector3 PositionOffset = new Vector3();
 
     // Tip gameObjects for calculating the relative distance from tip to palm, let me know what you think.
     public GameObject thumbTip, indexTip, midTip, ringTip, palm;
 
+    public TMPro.TMP_Text instructions; 
 
     // Close states for the mapping function, not sure about the value might have to think about it again.
     //public ArticulationBody tmb, index, mid, ring;
@@ -42,13 +49,16 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
 
     float[] fingerOpenState, fingerClosedState = new float[5] { 1f, 1f, 1f, 1f, 1f };
 
-    bool start;
+    bool start, ready;
 
-    Coroutine renderSequence, sendSerialSequence; 
+    Coroutine renderSequence, sendSerialSequence;
+    public float dropForce = 100f; 
 
     private void Start()
     {
-        originalMass = offsetMass.GetComponent<Rigidbody>().mass;
+        // Experimental design 
+        // Here we need to initially craete a pseudo-random array of trials + blocks (haptics/no-haptics) 
+        // On average a trial takes about 5 seconds = 
 
         fingerOpenState = new float[5] { 1f, 1f, 1f, 1f, 1f };
         fingerClosedState = new float[5] { 1f, 1f, 1f, 1f, 1f };
@@ -92,7 +102,29 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
             fingerClosedState = GetVRFingerState();
             start = true;
         }
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            ready = true;
 
+            if (targetCube != null)
+            {
+                Destroy(targetCube);
+            }
+            if(offsetMass!=null)
+            {
+                Destroy(offsetMass);
+            }
+            targetCube = Instantiate(TargetObj);
+            //offsetMass = Instantiate(offsetMassObj);
+            //targetCube.GetComponent<FixedJoint>().connectedBody = offsetMass.GetComponent<Rigidbody>();
+            originalMass = targetCube.GetComponent<Rigidbody>().mass;
+            targetCube.GetComponent<Rigidbody>().velocity = Vector3.zero;
+            targetCube.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
+            originalPosition = targetCube.transform.position;
+            originalRotation = targetCube.transform.rotation;
+            //originalOffsetRotation = offsetMass.transform.rotation;
+            //originalOffsetPosition = offsetMass.transform.position;
+        }
         //float vrThumbValue = Vector3.Distance(thumbTip.transform.position, palm.transform.position);
         //print("Thumb: " + vrThumbValue);
     }
@@ -175,7 +207,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         physicsObjects[3].yDrive = rng_digit;
     }
 
-    // Placeholder to get VR finger values: I added in the tip gameObjects for reach finger in order to get their relative value to the palm, not sure how to implement this.
+    // Get VR Finger Values using the fingerstates.
     private float[] GetVRFingerState()
     {
         float[] fingerstate = new float[5];
@@ -189,42 +221,117 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         return fingerstate;
     }
 
-
     IEnumerator RenderSlip()
     {
-        print("Staring render sequence!!");
-        offsetMass.GetComponent<Rigidbody>().mass = originalMass;
+        float meanVel = 0; 
+        float[] averageVel = new float[100];
+        int k = 0; 
 
-        // If we reach the target height, trigger the cube falling sequence through the offset mass
-        while (targetCube.transform.position.y < targetHeight)
+        // Another loop for blocks (blocks with haptics and without) 
+        for (int i = 0; i < 21; i++)
         {
-            yield return null; 
-        }
 
-        print("Star increasing the mass!!");
-        // Increase the offset mass (later also change the offset mass location) 
-        while (offsetMass.GetComponent<Rigidbody>().mass < targetOffsetMass)
-        {
-            offsetMass.GetComponent<Rigidbody>().mass += 1f;
-
-            if (targetCube.GetComponent<Rigidbody>().velocity.y < -0.15f)
+            while(!ready)
             {
-                try
+                yield return null;
+            }
+            ready = false;
+            
+            print("Starting render sequence!!");
+
+            instructions.text = "Lift object and hold for 5 seconds. Trial: " + i; 
+
+            // If we reach the target height, trigger the cube falling sequence through the offset mass
+            while (targetCube.transform.position.y < targetHeight)
+            {
+                yield return null;
+            }
+          
+            float startTime = Time.time;
+            float holdTime = 2.5f; // Hold for 5 seconds
+            float holdAtHeightTime = 0f; 
+
+            while (holdAtHeightTime < holdTime)
+            {
+                if(targetCube.transform.position.y >= targetHeight)
                 {
-                    serial1.WriteLine("fgfgbnbn");
-                    serial2.WriteLine("fgfgbnbn");
-                    Debug.Log("Slipping!");
-                    break;
+                    holdAtHeightTime += Time.deltaTime;
+                    instructions.text = "Hold time: " + holdAtHeightTime.ToString("F3") + "/ 2.5 seconds \n"+ "Trial: " + i;
                 }
-                catch { print("Something went wrong!"); }
+                else
+                {
+                    holdAtHeightTime = 0f; 
+                }    
+                yield return null;
             }
 
-            yield return null;
+            instructions.text = "Object should be falling. Trial: " + i;
+            dropForce = 0;
+            print("Start increasing the mass!!");
+            // Increase the offset mass (later also change the offset mass location) 
+            while (targetCube.GetComponent<Rigidbody>().mass < targetOffsetMass)
+            {
+                //targetCube.GetComponent<Rigidbody>().mass += 0.5f;
+                //targetCube.GetComponent<Rigidbody>().angularVelocity = new Vector3(0f,0f,10f); 
+                dropForce -= 0.25f;
+                float xRand = Random.Range(-0.15f, 0.15f);
+                float zRand = Random.Range(-0.15f, 0.15f);
+                Vector3 offsetPos = new Vector3(transform.position.x + xRand, transform.position.y, transform.position.z + zRand);
+                targetCube.GetComponent<Rigidbody>().AddForceAtPosition(new Vector3(0f, dropForce, 0f), targetCube.transform.position + offsetPos, ForceMode.Impulse);
+
+                // Get an average velocity measure and use that instead of current velocity
+                averageVel[k] = targetCube.GetComponent<Rigidbody>().velocity.y;
+
+                k++; 
+                if(k>= 100)
+                {
+                    float sumVel = 0; 
+                    foreach(float vel in averageVel)
+                    {
+                        sumVel += vel; 
+                    }
+                    meanVel = sumVel / 100f;
+
+                    k = 0;
+                }
+
+                print("Average vel: " + meanVel); 
+
+                if (meanVel < -0.1f)
+                {
+                    try
+                    {
+                        SlipMethod1();
+                        break;
+                    }
+                    catch { print("Something went wrong!"); }
+                }
+                targetCube.GetComponent<Rigidbody>().velocity = Vector3.zero;
+                targetCube.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
+                yield return null;
+            }
+            targetCube.GetComponent<Rigidbody>().angularVelocity = new Vector3(0f, 0f, 0f);
         }
         yield return null;
-
-
     }
+
+
+    void SlipMethod1()
+    {
+        // Fixed velocity 
+        serial1.WriteLine("fgfgbnbn"); // Add velocity term to the microcontrooler 
+        serial2.WriteLine("fgfgbnbn");
+        Debug.Log("Slipping!");
+    }
+    void SlipMethod2()
+    {
+        // Velocity and direction 
+        serial1.WriteLine("fgfgbnbn");
+        serial2.WriteLine("fgfgbnbn");
+        Debug.Log("Slipping!");
+    }
+
+
 
     // Mapping function to get the value between 0 and 1.
     public static float map(float value, float leftMin, float leftMax, float rightMin, float rightMax)
@@ -233,5 +340,3 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
     }
 
 }
-
-// Are we going to basically close the robot digit when say the relative thumbTip position to the palm is > 0.7? This makes sense in my head but I don't know if it fully works, let me know.

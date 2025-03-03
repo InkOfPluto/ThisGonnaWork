@@ -5,21 +5,25 @@ using UnityEngine;
 public class ResetPose : MonoBehaviour
 {
     Vector3 initPos;
-    Quaternion initRot; 
+    Quaternion initRot;
+    Rigidbody rb; 
 
     // Start is called before the first frame update
     void Start()
     {
+        rb = GetComponent<Rigidbody>(); 
         initPos = transform.position;
         initRot = transform.rotation; 
     }
 
-    // Update is called once per frame
+    //// Update is called once per frame
     //void Update()
     //{
-    //    if(transform.position.y < (initPos.y - (initPos.y*0.5f)))
+    //    if (transform.position.y > 5f)
     //    {
-    //        transform.position = new Vector3(initPos.x, initPos.y + 0.1f, initPos.z); 
+    //        transform.position = new Vector3(initPos.x, initPos.y + 0.1f, initPos.z);
+    //        transform.rotation = initRot;
+    //        print("Reset from height of 5 m"); 
     //    }
     //}
 
@@ -27,8 +31,10 @@ public class ResetPose : MonoBehaviour
     {
         if(other.gameObject.name == "Floor")
         {
-            transform.position = new Vector3(initPos.x, initPos.y + 0.1f, initPos.z);
+            rb.velocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero; 
+            transform.position = new Vector3(initPos.x, initPos.y + 0.05f, initPos.z);
+            transform.rotation = initRot; 
         }
-
     }
 }

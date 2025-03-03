@@ -13,6 +13,7 @@ TagManager:
   - tmb
   - rng
   - mid
+  - offset
   layers:
   - Default
   - TransparentFX
