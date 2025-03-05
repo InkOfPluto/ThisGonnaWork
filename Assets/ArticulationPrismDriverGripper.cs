@@ -63,7 +63,18 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
     {
         // Experimental design 
         // Here we need to initially craete a pseudo-random array of trials + blocks (haptics/no-haptics) 
-        // On average a trial takes about 5 seconds = 
+        // On average a trial takes about 5 seconds = 300 seconds per user
+
+        //int[] blockArrays = { 1, 2 }; // 1 Represents Haptics, 2 Represents No Haptics
+        //int[] trialArrays = { };
+        //var rnd = new System.Random();
+        //var randomIndex = rnd.Next(0, blockArrays.Length);
+  
+
+        //for (int i = 0; i <=20; i++)
+        //{
+        //    trialArrays = rnd.Next(0, blockArrays.Length);
+        //}
 
         fingerOpenState = new float[5] { 1f, 1f, 1f, 1f, 1f };
         fingerClosedState = new float[5] { 1f, 1f, 1f, 1f, 1f };
@@ -338,3 +349,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
     }
 
 }
+
+// TO DO:
+// Add slip rendering based on fingers
+// Finish the experimental procedure arrays.
