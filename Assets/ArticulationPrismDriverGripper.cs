@@ -5,8 +5,66 @@ using System.IO.Ports;
 using TMPro;
 //using Unity.VisualScripting;
 
+public class DataClass
+{
+    public List<string> trialInfo = new List<string>();
+    public List<float> xPos = new List<float>();
+    public List<float> yPos = new List<float>();
+    public List<float> zPos = new List<float>();
+    public List<float> xRot = new List<float>();
+    public List<float> yRot = new List<float>();
+    public List<float> zRot = new List<float>();
+    public List<float> xTPos = new List<float>();
+    public List<float> yTPos = new List<float>();
+    public List<float> zTPos = new List<float>();
+    public List<float> xTrot = new List<float>();
+    public List<float> yTrot = new List<float>();
+    public List<float> zTrot = new List<float>();
+    public List<float> time = new List<float>();
+
+    DataClass()
+    {
+        trialInfo = new List<string>();
+        xPos = new List<float>();
+        yPos = new List<float>();
+        zPos = new List<float>();
+        xRot = new List<float>();
+        yRot = new List<float>();
+        zRot = new List<float>();
+        xTPos = new List<float>();
+        yTPos = new List<float>();
+        zTPos = new List<float>();
+        xTrot = new List<float>();
+        yTrot = new List<float>();
+        zTrot = new List<float>();
+        time = new List<float>();
+    }
+
+    void ClearAllVars()
+    {
+        trialInfo.Clear();
+        xPos.Clear();
+        yPos.Clear();
+        zPos.Clear();
+        xRot.Clear();
+        yRot.Clear();
+        zRot.Clear();
+        xTPos.Clear();
+        yTPos.Clear();
+        zTPos.Clear();
+        xTrot.Clear();
+        yTrot.Clear();
+        zTrot.Clear();
+        time.Clear();
+    }
+
+}
+
 public class ArticulationPrismDriverGripper : MonoBehaviour
 {
+
+    DataClass myData;
+
     [Header("Slip Parameters")]
     public string Comport1;
     public string Comport2;
@@ -57,24 +115,35 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
     private float[] averageVel = new float[100];
     private float meanVel = 0f;
     private int k = 0;
-    int trial = -1; 
+    int trial = -1;
+
+    Rigidbody targetCube_RB;
+    int[][] blockedTrials;
+
+    public bool startTrial;
+    bool trialEnd = false; 
 
     private void Start()
     {
+
+        trialEnd = true; // For the first ever trial it should be set to true 
+
         // Experimental design 
         // Here we need to initially craete a pseudo-random array of trials + blocks (haptics/no-haptics) 
         // On average a trial takes about 5 seconds = 300 seconds per user
 
-        //int[] blockArrays = { 1, 2 }; // 1 Represents Haptics, 2 Represents No Haptics
-        //int[] trialArrays = { };
-        //var rnd = new System.Random();
-        //var randomIndex = rnd.Next(0, blockArrays.Length);
-  
+        // Create a double array (array of arrays)
+        blockedTrials = new int[2][];
 
-        //for (int i = 0; i <=20; i++)
-        //{
-        //    trialArrays = rnd.Next(0, blockArrays.Length);
-        //}
+        // (0) Represents No Haptics and (1) Represents Haptics
+        blockedTrials[0] = new int[] { 0, 1, 0, 1, 0 };
+
+        // (1,2,3,4) represent the 4 different drop offsets 
+        blockedTrials[1] = new int[] {1,1,1,1,1,2,2,2,2,2,3,3,3,3,3,4,4,4,4,4};
+
+        // Randomly shuffle the conditions for each participant once at the start 
+        Shuffle(blockedTrials[0]); 
+        Shuffle(blockedTrials[1]);
 
         fingerOpenState = new float[5] { 1f, 1f, 1f, 1f, 1f };
         fingerClosedState = new float[5] { 1f, 1f, 1f, 1f, 1f };
@@ -108,8 +177,14 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         }
         catch
         {
-            print("Robot gripper not available!"); 
+            print("Robot gripper not available!");
         }
+    }
+
+    public void StartTrialFunction(float val)
+    {
+        print("Button val: " + val);
+        startTrial = true; 
     }
 
     private void Update()
@@ -124,9 +199,10 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
             fingerClosedState = GetVRFingerState();
             start = true;
         }
-        if (Input.GetKeyDown(KeyCode.R))
+        if (Input.GetKeyDown(KeyCode.R) | startTrial)
         {
-            trial++; 
+            if(trialEnd)
+                trial++;
 
             if (targetCube != null)
             {
@@ -137,11 +213,12 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
                 Destroy(offsetMass);
             }
             targetCube = Instantiate(TargetObj);
+            targetCube_RB = targetCube.GetComponent<Rigidbody>();
             //offsetMass = Instantiate(offsetMassObj);
             //targetCube.GetComponent<FixedJoint>().connectedBody = offsetMass.GetComponent<Rigidbody>();
-            originalMass = targetCube.GetComponent<Rigidbody>().mass;
-            targetCube.GetComponent<Rigidbody>().velocity = Vector3.zero;
-            targetCube.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
+            originalMass = targetCube_RB.mass;
+            targetCube_RB.velocity = Vector3.zero;
+            targetCube_RB.angularVelocity = Vector3.zero;
             originalPosition = targetCube.transform.position;
             originalRotation = targetCube.transform.rotation;
 
@@ -149,15 +226,17 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
             {
                 StopCoroutine(renderSequence);
             }
-            renderSequence = StartCoroutine(RenderSlip());
+            renderSequence = StartCoroutine(ExperimentalProcedure());
+
+            startTrial = false; 
         }
         //float vrThumbValue = Vector3.Distance(thumbTip.transform.position, palm.transform.position);
         //print("Thumb: " + vrThumbValue);
 
         // Get an average velocity measure and use that instead of current velocity
-        if(targetCube!=null)
+        if (targetCube != null)
         {
-            averageVel[k] = targetCube.GetComponent<Rigidbody>().velocity.y;
+            averageVel[k] = targetCube_RB.velocity.y;
             k++;
             if (k >= 5)
             {
@@ -173,7 +252,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         }
         else
         {
-            meanVel = 0f; 
+            meanVel = 0f;
         }
     }
 
@@ -269,20 +348,19 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         return fingerstate;
     }
 
-    IEnumerator RenderSlip()
+    IEnumerator ExperimentalProcedure()
     {
+        trialEnd = false; 
+
         targetHeight.GetComponent<MeshRenderer>().enabled = true;
-
         // Another loop for blocks (blocks with haptics and without) 
-        instructions.text = "Lift object and hold for 5 seconds. Trial: " + trial;
-
+        instructions.text = "Lift object and hold for 5 seconds. \nTrial: " + trial;
         // If we reach the target height, trigger the cube falling sequence through the offset mass
         while (targetCube.transform.position.y < targetHeight.position.y)
         {
             yield return null;
         }
 
-        float startTime = Time.time;
         float holdTime = 2.5f; // Hold for 5 seconds
         float holdAtHeightTime = 0f;
 
@@ -292,60 +370,92 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
             {
                 holdAtHeightTime += Time.deltaTime;
                 instructions.text = "Hold time: " + holdAtHeightTime.ToString("F3") + "/ 2.5 seconds \n" + "Trial: " + trial;
-                targetHeight.GetComponent<MeshRenderer>().enabled = false; 
+                targetHeight.GetComponent<MeshRenderer>().enabled = false;
             }
             else
             {
                 holdAtHeightTime = 0f;
                 targetHeight.GetComponent<MeshRenderer>().enabled = true;
+                trialEnd = false; 
             }
             yield return null;
         }
 
-        instructions.text = "Increase object downward force. Trial: " + trial;
+        instructions.text = "Trial: " + trial + "\nKeep hold and keep steady.";
         dropForce = 0;
         // Increase the offset mass (later also change the offset mass location) 
         while (targetCube.transform.position.y > targetHeight.transform.position.y) // Corrected this away from mass and velocity and use the height of the target object instead 
         {
-            //targetCube.GetComponent<Rigidbody>().mass += 0.5f;
-            //targetCube.GetComponent<Rigidbody>().angularVelocity = new Vector3(0f,0f,10f); 
+            //targetCube_RB.mass += 0.5f;
+            //targetCube_RB.angularVelocity = new Vector3(0f,0f,10f); 
             dropForce -= 0.25f;
-            float xRand = Random.Range(-0.15f, 0.15f);
-            float zRand = Random.Range(-0.15f, 0.15f);
+            //float xRand = Random.Range(-0.15f, 0.15f);
+            //float zRand = Random.Range(-0.15f, 0.15f);
+            float xRand = presetX[blockedTrials[1][trial]];
+            float zRand = presetZ[blockedTrials[1][trial]];
+
             Vector3 offsetPos = new Vector3(transform.position.x + xRand, transform.position.y, transform.position.z + zRand);
-            targetCube.GetComponent<Rigidbody>().AddForceAtPosition(new Vector3(0f, dropForce, 0f), targetCube.transform.position + offsetPos, ForceMode.Impulse);
+            targetCube_RB.AddForceAtPosition(new Vector3(0f, dropForce, 0f), targetCube.transform.position + offsetPos, ForceMode.Impulse);
             yield return null;
         }
 
-        targetCube.GetComponent<Rigidbody>().velocity = Vector3.zero;
-        targetCube.GetComponent<Rigidbody>().angularVelocity = Vector3.zero;
+        targetCube_RB.velocity = Vector3.zero;
+        targetCube_RB.angularVelocity = Vector3.zero;
 
         SlipMethod1();
+
+        instructions.text = "Press button for next trial!";
+        trialEnd = true;    
+
         yield return null;
     }
 
-
     void SlipMethod1()
     {
-        // Fixed velocity 
-        serial1.WriteLine("fgfgbnbn"); // Add velocity term to the microcontrooler 
-        serial2.WriteLine("fgfgbnbn");
-        Debug.Log("Slipping!");
+        try
+        {
+            // Fixed velocity 
+            serial1.WriteLine("fgfgbnbn"); // Add velocity term to the microcontrooler 
+            serial2.WriteLine("fgfgbnbn");
+            Debug.Log("Slipping!");
+        }
+        catch
+        {
+            print("Serial device error!"); 
+        }
     }
     void SlipMethod2()
     {
-        // Velocity and direction 
-        serial1.WriteLine("fgfgbnbn");
-        serial2.WriteLine("fgfgbnbn");
-        Debug.Log("Slipping!");
+        try
+        {
+            // Velocity and direction 
+            serial1.WriteLine("fgfgbnbn");
+            serial2.WriteLine("fgfgbnbn");
+            Debug.Log("Slipping!");
+        }
+        catch
+        {
+            print("Serial device error!");
+        }
     }
-
-
 
     // Mapping function to get the value between 0 and 1.
     public static float map(float value, float leftMin, float leftMax, float rightMin, float rightMax)
     {
         return rightMin + (value - leftMin) * (rightMax - rightMin) / (leftMax - leftMin);
+    }
+
+    static System.Random _random = new System.Random();
+    public static void Shuffle<T>(T[] array)
+    {
+        int n = array.Length;
+        for (int i = 0; i < (n - 1); i++)
+        {
+            int r = i + _random.Next(n - i);
+            T t = array[r];
+            array[r] = array[i];
+            array[i] = t;
+        }
     }
 
 }
