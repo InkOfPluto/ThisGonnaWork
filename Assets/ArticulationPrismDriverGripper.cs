@@ -62,7 +62,7 @@ public class DataClass
 
 public class ArticulationPrismDriverGripper : MonoBehaviour
 {
-
+    #region Variables
     DataClass myData;
 
     [Header("Slip Parameters")]
@@ -121,11 +121,19 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
     int[][] blockedTrials;
 
     public bool startTrial;
-    bool trialEnd = false; 
+    bool trialEnd = false;
+
+    public GameObject forcePosBody;
+    GameObject forceatposbody = new GameObject();
+
+    string[] force_directions = new string[] {"Nothing", "Tilt_Right", "Tilt_Left", "Tilt_Forward", "Tilt_Backward" };
+
+    #endregion
 
     private void Start()
     {
 
+        force_directions = new string[] {"Tilt_Right", "Tilt_Left", "Tilt_Forward", "Tilt_Backward" };
         trialEnd = true; // For the first ever trial it should be set to true 
 
         // Experimental design 
@@ -136,13 +144,13 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         blockedTrials = new int[2][];
 
         // (0) Represents No Haptics and (1) Represents Haptics
-        blockedTrials[0] = new int[] { 0, 1, 0, 1, 0 };
+        blockedTrials[0] = new int[] { 0, 1, 0, 1};
 
         // (1,2,3,4) represent the 4 different drop offsets 
-        blockedTrials[1] = new int[] {1,1,1,1,1,2,2,2,2,2,3,3,3,3,3,4,4,4,4,4};
+        blockedTrials[1] = new int[] { 1, 2, 3, 4 };
 
         // Randomly shuffle the conditions for each participant once at the start 
-        Shuffle(blockedTrials[0]); 
+        Shuffle(blockedTrials[0]);
         Shuffle(blockedTrials[1]);
 
         fingerOpenState = new float[5] { 1f, 1f, 1f, 1f, 1f };
@@ -184,7 +192,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
     public void StartTrialFunction(float val)
     {
         print("Button val: " + val);
-        startTrial = true; 
+        startTrial = true;
     }
 
     private void Update()
@@ -201,7 +209,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         }
         if (Input.GetKeyDown(KeyCode.R) | startTrial)
         {
-            if(trialEnd)
+            if (trialEnd)
                 trial++;
 
             if (targetCube != null)
@@ -228,7 +236,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
             }
             renderSequence = StartCoroutine(ExperimentalProcedure());
 
-            startTrial = false; 
+            startTrial = false;
         }
         //float vrThumbValue = Vector3.Distance(thumbTip.transform.position, palm.transform.position);
         //print("Thumb: " + vrThumbValue);
@@ -350,11 +358,17 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
 
     IEnumerator ExperimentalProcedure()
     {
-        trialEnd = false; 
+        int localTrial = trial;
+        int _trial = localTrial % 4; 
+        
+
+        trialEnd = false;
 
         targetHeight.GetComponent<MeshRenderer>().enabled = true;
         // Another loop for blocks (blocks with haptics and without) 
-        instructions.text = "Lift object and hold for 5 seconds. \nTrial: " + trial;
+        instructions.text = "Lift object and hold for 2.5 seconds. \nTrial: " + trial;
+        instructions.text = force_directions[blockedTrials[1][_trial]].ToString() + "\nHaptics: " + blockedTrials[0][_trial].ToString();
+
         // If we reach the target height, trigger the cube falling sequence through the offset mass
         while (targetCube.transform.position.y < targetHeight.position.y)
         {
@@ -376,7 +390,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
             {
                 holdAtHeightTime = 0f;
                 targetHeight.GetComponent<MeshRenderer>().enabled = true;
-                trialEnd = false; 
+                trialEnd = false;
             }
             yield return null;
         }
@@ -384,30 +398,84 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         instructions.text = "Trial: " + trial + "\nKeep hold and keep steady.";
         dropForce = 0;
         // Increase the offset mass (later also change the offset mass location) 
+        float xRand = 0f;
+        float zRand = 0f;
+
+        float[] offsetvals = DeterminePositionalOffset();
+        xRand = offsetvals[0];
+        zRand = offsetvals[1];
+
         while (targetCube.transform.position.y > targetHeight.transform.position.y) // Corrected this away from mass and velocity and use the height of the target object instead 
         {
             //targetCube_RB.mass += 0.5f;
             //targetCube_RB.angularVelocity = new Vector3(0f,0f,10f); 
             dropForce -= 0.25f;
-            //float xRand = Random.Range(-0.15f, 0.15f);
-            //float zRand = Random.Range(-0.15f, 0.15f);
-            float xRand = presetX[blockedTrials[1][trial]];
-            float zRand = presetZ[blockedTrials[1][trial]];
 
-            Vector3 offsetPos = new Vector3(transform.position.x + xRand, transform.position.y, transform.position.z + zRand);
+            Vector3 offsetPos = new Vector3(transform.position.x + xRand, transform.position.y + 0.015f, transform.position.z + zRand);
+            // For debugging, instantiate a visual aid to show where the offset force is being applied
+            if (forceatposbody != null)
+                Destroy(forceatposbody); 
+            forceatposbody = Instantiate(forcePosBody, targetCube.transform.position + offsetPos, Quaternion.identity);
+
             targetCube_RB.AddForceAtPosition(new Vector3(0f, dropForce, 0f), targetCube.transform.position + offsetPos, ForceMode.Impulse);
             yield return null;
         }
 
+        yield return new WaitForSeconds(1f);
+
         targetCube_RB.velocity = Vector3.zero;
         targetCube_RB.angularVelocity = Vector3.zero;
 
-        SlipMethod1();
+        if (blockedTrials[0][_trial] == 0)
+        {
+            // No haptics 
+            print("No slid rendering");
+        }
+        else
+        {
+            SlipMethod1();
+        }
 
         instructions.text = "Press button for next trial!";
-        trialEnd = true;    
+        trialEnd = true;
+
+        if (forceatposbody != null)
+            Destroy(forceatposbody);
 
         yield return null;
+    }
+
+    float[] DeterminePositionalOffset()
+    {
+        float xRand = 0f;
+        float zRand = 0f;
+        float[] result = new float[2] { 0f, 0f };
+
+        if (blockedTrials[1][trial] == 1) // Right (positive) x-axis positional offset for applied force 
+        {
+            xRand = 0.02f;
+            zRand = 0f;
+        }
+        if (blockedTrials[1][trial] == 2) // Left (negative) x-axis positional offset for applied force 
+        {
+            xRand = -0.02f;
+            zRand = 0f;
+        }
+        if (blockedTrials[1][trial] == 3) // Forward (positive) z-axis positional offset for applied force 
+        {
+            xRand = 0f;
+            zRand = 0.02f;
+        }
+        if (blockedTrials[1][trial] == 4) // Backward (negative) z-axis positional offset for applied force 
+        {
+            xRand = 0f;
+            zRand = -0.02f;
+        }
+
+        result[0] = xRand;
+        result[1] = zRand;
+
+        return result;
     }
 
     void SlipMethod1()
@@ -421,7 +489,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         }
         catch
         {
-            print("Serial device error!"); 
+            print("Serial device error!");
         }
     }
     void SlipMethod2()

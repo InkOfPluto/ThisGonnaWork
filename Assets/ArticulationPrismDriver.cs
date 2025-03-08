@@ -80,10 +80,10 @@ public class ArticulationPrismDriver : MonoBehaviour
             Vector3 positionError = (driverObjects[i].position + PositionOffset) - physicsObjects[i].worldCenterOfMass;
 
             // Calculate desired velocity
-            Vector3 desiredVelocity = positionError / movementTime;
+            Vector3 desiredVelocity = positionError / Time.fixedDeltaTime; // movementTime
 
-            // Calculate velocity difference
-            Vector3 velocityDifference = desiredVelocity - physicsObjects[i].velocity;
+             // Calculate velocity difference
+             Vector3 velocityDifference = desiredVelocity - physicsObjects[i].velocity;
 
             // Apply force based on velocity difference
             physicsObjects[i].AddForce(velocityDifference * physicsObjects[i].mass * velocityGain);
