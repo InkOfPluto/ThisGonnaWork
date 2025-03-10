@@ -147,7 +147,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         blockedTrials[0] = new int[] { 0, 1, 0, 1};
 
         // (1,2,3,4) represent the 4 different drop offsets 
-        blockedTrials[1] = new int[] { 1, 2, 3, 4 };
+        blockedTrials[1] = new int[] { 0, 1, 2, 3 };
 
         // Randomly shuffle the conditions for each participant once at the start 
         Shuffle(blockedTrials[0]);
@@ -172,7 +172,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         catch { print("Something went wrong!"); }
     }
 
-    // Do we assign these to the robot wrist digits on the prefab? They currently are unassigned in Unity
+   
     void FindGripper()
     {
         try
@@ -361,7 +361,6 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         int localTrial = trial;
         int _trial = localTrial % 4; 
         
-
         trialEnd = false;
 
         targetHeight.GetComponent<MeshRenderer>().enabled = true;
@@ -401,7 +400,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         float xRand = 0f;
         float zRand = 0f;
 
-        float[] offsetvals = DeterminePositionalOffset();
+        float[] offsetvals = DeterminePositionalOffset(_trial);
         xRand = offsetvals[0];
         zRand = offsetvals[1];
 
@@ -409,7 +408,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         {
             //targetCube_RB.mass += 0.5f;
             //targetCube_RB.angularVelocity = new Vector3(0f,0f,10f); 
-            dropForce -= 0.25f;
+            dropForce -= 0.15f;
 
             Vector3 offsetPos = new Vector3(transform.position.x + xRand, transform.position.y + 0.015f, transform.position.z + zRand);
             // For debugging, instantiate a visual aid to show where the offset force is being applied
@@ -417,7 +416,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
                 Destroy(forceatposbody); 
             forceatposbody = Instantiate(forcePosBody, targetCube.transform.position + offsetPos, Quaternion.identity);
 
-            targetCube_RB.AddForceAtPosition(new Vector3(0f, dropForce, 0f), targetCube.transform.position + offsetPos, ForceMode.Impulse);
+            targetCube_RB.AddForceAtPosition(new Vector3(0f, dropForce, 0f), targetCube.transform.position + forceatposbody.transform.position, ForceMode.Impulse);
             yield return null;
         }
 
@@ -429,7 +428,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         if (blockedTrials[0][_trial] == 0)
         {
             // No haptics 
-            print("No slid rendering");
+            print("No slip rendering");
         }
         else
         {
@@ -445,28 +444,28 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         yield return null;
     }
 
-    float[] DeterminePositionalOffset()
+    float[] DeterminePositionalOffset(int _trial)
     {
         float xRand = 0f;
         float zRand = 0f;
         float[] result = new float[2] { 0f, 0f };
 
-        if (blockedTrials[1][trial] == 1) // Right (positive) x-axis positional offset for applied force 
+        if (blockedTrials[1][_trial] == 0) // Right (positive) x-axis positional offset for applied force 
         {
             xRand = 0.02f;
             zRand = 0f;
         }
-        if (blockedTrials[1][trial] == 2) // Left (negative) x-axis positional offset for applied force 
+        if (blockedTrials[1][_trial] == 1) // Left (negative) x-axis positional offset for applied force 
         {
             xRand = -0.02f;
             zRand = 0f;
         }
-        if (blockedTrials[1][trial] == 3) // Forward (positive) z-axis positional offset for applied force 
+        if (blockedTrials[1][_trial] == 2) // Forward (positive) z-axis positional offset for applied force 
         {
             xRand = 0f;
             zRand = 0.02f;
         }
-        if (blockedTrials[1][trial] == 4) // Backward (negative) z-axis positional offset for applied force 
+        if (blockedTrials[1][_trial] == 3) // Backward (negative) z-axis positional offset for applied force 
         {
             xRand = 0f;
             zRand = -0.02f;
