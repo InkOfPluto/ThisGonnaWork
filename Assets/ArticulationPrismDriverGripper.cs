@@ -133,7 +133,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
     private void Start()
     {
 
-        force_directions = new string[] {"Tilt_Right", "Tilt_Left", "Tilt_Forward", "Tilt_Backward" };
+        force_directions = new string[] {"Tilt_Left", "Tilt_Right", "Tilt_Backward", "Tilt_Forward" };
         trialEnd = true; // For the first ever trial it should be set to true 
 
         // Experimental design 
