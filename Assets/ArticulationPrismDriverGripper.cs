@@ -1,8 +1,9 @@
+using Newtonsoft.Json;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
 using System.IO.Ports;
-using TMPro;
+using UnityEngine;
+using System.IO;
 //using Unity.VisualScripting;
 
 public class DataClass
@@ -40,7 +41,7 @@ public class DataClass
         time = new List<float>();
     }
 
-    void ClearAllVars()
+    public void ClearAllVars()
     {
         trialInfo.Clear();
         xPos.Clear();
@@ -63,7 +64,17 @@ public class DataClass
 public class ArticulationPrismDriverGripper : MonoBehaviour
 {
     #region Variables
-    DataClass myData;
+    public DataClass myData;
+
+    public bool threaded = true;
+
+    public string path;
+    private Coroutine saveDataCoroutine;
+    private int trialNumber = 0;
+    private float startTime;
+    private float elapsedTime = 0f;
+
+    private bool startRecord = false;
 
     [Header("Slip Parameters")]
     public string Comport1;
@@ -124,7 +135,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
     bool trialEnd = false;
 
     public GameObject forcePosBody;
-    GameObject forceatposbody = new GameObject();
+    GameObject forceatposbody; // = new GameObject();
 
     string[] force_directions = new string[] {"Nothing", "Tilt_Right", "Tilt_Left", "Tilt_Forward", "Tilt_Backward" };
 
@@ -132,6 +143,9 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
 
     private void Start()
     {
+        startTime = Time.time;
+
+        forceatposbody = new GameObject();
 
         force_directions = new string[] {"Tilt_Left", "Tilt_Right", "Tilt_Backward", "Tilt_Forward" };
         trialEnd = true; // For the first ever trial it should be set to true 
@@ -144,10 +158,10 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         blockedTrials = new int[2][];
 
         // (0) Represents No Haptics and (1) Represents Haptics
-        blockedTrials[0] = new int[] { 0, 1, 0, 1};
+        blockedTrials[0] = new int[] { 0, 1, 0, 1, 0, 1, 0 ,1};
 
         // (1,2,3,4) represent the 4 different drop offsets 
-        blockedTrials[1] = new int[] { 0, 1, 2, 3 };
+        blockedTrials[1] = new int[] { 0, 1, 2, 3, 4, 5, 6, 7 };
 
         // Randomly shuffle the conditions for each participant once at the start 
         Shuffle(blockedTrials[0]);
@@ -182,6 +196,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
             physicsObjects[2] = GameObject.FindWithTag("mid").GetComponent<ArticulationBody>();
             physicsObjects[3] = GameObject.FindWithTag("rng").GetComponent<ArticulationBody>();
             physicsObjects[4] = GameObject.FindWithTag("wrist").GetComponent<ArticulationBody>();
+            print("Robot gripper found!");
         }
         catch
         {
@@ -209,6 +224,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         }
         if (Input.GetKeyDown(KeyCode.R) | startTrial)
         {
+            startRecord = true;
             if (trialEnd)
                 trial++;
 
@@ -268,51 +284,89 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
     {
         if (start)
         {
-            //if (physicsObjects[4] == null || driverObjects == null) return;
+            if (physicsObjects[4] == null)
+            {
+                print("Looking for gripper again!"); 
+                FindGripper(); 
+            }
 
             #region Orientation Control
-            //if (driverObjects.gameObject.name.Contains("Palm"))
-            //{
-            //    // 1. Compute target orientation with offset
-            //    Quaternion offsetQ = Quaternion.Euler(RotationOffset);
-            //    Quaternion desiredRotation = driverObjects.rotation * offsetQ; // Apply offset to driver's rotation
+            if (driverObjects.gameObject.name.Contains("Palm"))
+            {
+                // 1. Compute target orientation with offset
+                Quaternion offsetQ = Quaternion.Euler(RotationOffset);
+                Quaternion desiredRotation = driverObjects.rotation * offsetQ; // Apply offset to driver's rotation
 
-            //    // 2. Rotation Control
-            //    // Calculate rotation difference
-            //    Quaternion rotationDiff = desiredRotation * Quaternion.Inverse(physicsObjects[4].transform.rotation);
-            //    rotationDiff.ToAngleAxis(out float angleDegrees, out Vector3 rotationAxis);
+                // 2. Rotation Control
+                // Calculate rotation difference
+                Quaternion rotationDiff = desiredRotation * Quaternion.Inverse(physicsObjects[4].transform.rotation);
+                rotationDiff.ToAngleAxis(out float angleDegrees, out Vector3 rotationAxis);
 
-            //    // Handle the case where angle = 0
-            //    if (Mathf.Approximately(angleDegrees, 0f)) return;
+                // Handle the case where angle = 0
+                if (Mathf.Approximately(angleDegrees, 0f)) return;
 
-            //    // Convert angle to radians and apply torque
-            //    float angleRadians = angleDegrees * Mathf.Deg2Rad;
-            //    Vector3 torque = rotationAxis.normalized * (angleRadians * rotationGain);
-            //    physicsObjects[4].AddTorque(torque, ForceMode.Force);
-            //}
-            #endregion
+                // Convert angle to radians and apply torque
+                float angleRadians = angleDegrees * Mathf.Deg2Rad;
+                Vector3 torque = rotationAxis.normalized * (angleRadians * rotationGain);
+                physicsObjects[4].AddTorque(torque, ForceMode.Force);
+                //}
+                #endregion
 
-            #region Position Control
-            //// 0. Counter gravity 
-            //physicsObjects[4].AddForce(-Physics.gravity * physicsObjects[4].mass);
+                #region Position Control
+                // 0. Counter gravity 
+                physicsObjects[4].AddForce(-Physics.gravity * physicsObjects[4].mass);
 
-            //// 1. Position Control
-            //Vector3 positionError = (driverObjects.position + PositionOffset) - physicsObjects[4].worldCenterOfMass;
+                // 1. Position Control
+                Vector3 positionError = (driverObjects.position + PositionOffset) - physicsObjects[4].worldCenterOfMass;
 
-            //// Calculate desired velocity
-            //Vector3 desiredVelocity = positionError / movementTime;
+                // Calculate desired velocity
+                Vector3 desiredVelocity = positionError / movementTime;
 
-            //// Calculate velocity difference
-            //Vector3 velocityDifference = desiredVelocity - physicsObjects[4].velocity;
+                // Calculate velocity difference
+                Vector3 velocityDifference = desiredVelocity - physicsObjects[4].velocity;
 
-            //// Apply force based on velocity difference
-            //physicsObjects[4].AddForce(velocityDifference * physicsObjects[4].mass * velocityGain);
+                // Apply force based on velocity difference
+                physicsObjects[4].AddForce(velocityDifference * physicsObjects[4].mass * velocityGain);
 
-            //// Apply damping
-            //physicsObjects[4].AddForce(-physicsObjects[4].velocity * dampingFactor * physicsObjects[4].mass);
-            #endregion
+                // Apply damping
+                physicsObjects[4].AddForce(-physicsObjects[4].velocity * dampingFactor * physicsObjects[4].mass);
+                #endregion
 
-            Grip();
+                Grip();
+            }
+        }
+
+        if (startRecord)
+        {
+            elapsedTime = Time.time - startTime;
+
+            // Get the position and rotation of the object and target, as well as Trial info
+            myData.xPos.Add(transform.position.x);
+            myData.yPos.Add(transform.position.y);
+            myData.zPos.Add(transform.position.z);
+            myData.xRot.Add(transform.rotation.x);
+            myData.yRot.Add(transform.rotation.y);
+            myData.zRot.Add(transform.rotation.z);
+            myData.xTPos.Add(targetCube.transform.position.x);
+            myData.yTPos.Add(targetCube.transform.position.y);
+            myData.zTPos.Add(targetCube.transform.position.z);
+            myData.xTrot.Add(targetCube.transform.rotation.x);
+            myData.yTrot.Add(targetCube.transform.rotation.y);
+            myData.zTrot.Add(targetCube.transform.rotation.z);
+            myData.time.Add(elapsedTime);
+            myData.trialInfo.Add("Trial " + trialNumber.ToString());
+        }
+       
+
+        if (Input.GetKeyDown(KeyCode.S))
+        {
+            if (saveDataCoroutine != null)
+            {
+                StopCoroutine(saveDataCoroutine);
+            }
+            saveDataCoroutine = StartCoroutine(SaveFile());
+            trialNumber++;
+            startTime = Time.time;
         }
     }
 
@@ -343,7 +397,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
     }
 
     // Get VR Finger Values using the fingerstates.
-    private float[] GetVRFingerState()
+    float[] GetVRFingerState()
     {
         float[] fingerstate = new float[5];
 
@@ -359,7 +413,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
     IEnumerator ExperimentalProcedure()
     {
         int localTrial = trial;
-        int _trial = localTrial % 4; 
+        int _trial = localTrial % 8; 
         
         trialEnd = false;
 
@@ -440,6 +494,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
 
         if (forceatposbody != null)
             Destroy(forceatposbody);
+        startRecord = false;
 
         yield return null;
     }
@@ -450,26 +505,47 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         float zRand = 0f;
         float[] result = new float[2] { 0f, 0f };
 
-        if (blockedTrials[1][_trial] == 0) // Right (positive) x-axis positional offset for applied force 
+        if (blockedTrials[1][_trial] == 0) // East (positive) x-axis positional offset for applied force 
         {
             xRand = 0.02f;
             zRand = 0f;
         }
-        if (blockedTrials[1][_trial] == 1) // Left (negative) x-axis positional offset for applied force 
+        if (blockedTrials[1][_trial] == 1) // West (negative) x-axis positional offset for applied force 
         {
             xRand = -0.02f;
             zRand = 0f;
         }
-        if (blockedTrials[1][_trial] == 2) // Forward (positive) z-axis positional offset for applied force 
+        if (blockedTrials[1][_trial] == 2) // North (positive) z-axis positional offset for applied force 
         {
             xRand = 0f;
             zRand = 0.02f;
         }
-        if (blockedTrials[1][_trial] == 3) // Backward (negative) z-axis positional offset for applied force 
+        if (blockedTrials[1][_trial] == 3) // South (negative) z-axis positional offset for applied force 
         {
             xRand = 0f;
             zRand = -0.02f;
         }
+        if (blockedTrials[1][_trial] == 4) // NE (positive) x-axis positional offset for applied force 
+        {
+            xRand = 0.01f;
+            zRand = 0.01f;
+        }
+        if (blockedTrials[1][_trial] == 5) // NW (negative) x-axis positional offset for applied force 
+        {
+            xRand = 0.01f;
+            zRand = -0.01f;
+        }
+        if (blockedTrials[1][_trial] == 6) // SE (positive) z-axis positional offset for applied force 
+        {
+            xRand = -0.01f;
+            zRand = 0.01f;
+        }
+        if (blockedTrials[1][_trial] == 7) // SW (negative) z-axis positional offset for applied force 
+        {
+            xRand = -0.01f;
+            zRand = -0.01f;
+        }
+
 
         result[0] = xRand;
         result[1] = zRand;
@@ -482,7 +558,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         try
         {
             // Fixed velocity 
-            serial1.WriteLine("fgfgbnbn"); // Add velocity term to the microcontrooler 
+            serial1.WriteLine("fgfgbnbn"); 
             serial2.WriteLine("fgfgbnbn");
             Debug.Log("Slipping!");
         }
@@ -525,6 +601,30 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         }
     }
 
+    private IEnumerator SaveFile()
+    {
+        // Convert to json and send to another site on the server
+        string jsonString = JsonConvert.SerializeObject(myData, Formatting.Indented);
+
+        // Save the data to a file
+        if (!threaded)
+        {
+            File.WriteAllText(path + "/Data/" + myData.trialInfo + ".json", jsonString);
+        }
+        else
+        {
+            // create new thread to save the data to a file (only operation that can be done in background)
+            new System.Threading.Thread(() =>
+            {
+                File.WriteAllText(path + "/Data/" + myData.trialInfo + ".json", jsonString);
+            }).Start();
+        }
+
+        // Empty text fields for next trials (potential for issues with next trial)
+        myData.ClearAllVars();
+
+        yield return null;
+    }
 }
 
 // TO DO:
