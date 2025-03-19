@@ -9251,8 +9251,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4b89c9b32e6703d4db6dd7f7563a4dce, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  threaded: 1
-  path: 
+  threaded: 0
+  path: C:\Users\SyMoN\Desktop\H2B\Data\
   Comport1: COM3
   Comport2: COM5
   TargetObj: {fileID: 2887062428159178312, guid: a13fd3a1abf41ea499358be38b624360, type: 3}
@@ -9273,7 +9273,7 @@ MonoBehaviour:
   ringTip: {fileID: 1325074939}
   palm: {fileID: 465933906}
   instructions: {fileID: 2124154378}
-  dropForce: -1
+  dropForce: -0.05
   startTrial: 0
   forcePosBody: {fileID: 4442982518268232948, guid: f1f09e063c2dc9344a728efe60687b37, type: 3}
 --- !u!4 &1582313664 stripped

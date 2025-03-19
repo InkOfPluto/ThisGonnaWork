@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO.Ports;
 using UnityEngine;
 using System.IO;
+using System.Linq; 
 //using Unity.VisualScripting;
 
 public class DataClass
@@ -23,7 +24,7 @@ public class DataClass
     public List<float> zTrot = new List<float>();
     public List<float> time = new List<float>();
 
-    DataClass()
+    public DataClass()
     {
         trialInfo = new List<string>();
         xPos = new List<float>();
@@ -137,17 +138,18 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
     public GameObject forcePosBody;
     GameObject forceatposbody; // = new GameObject();
 
-    string[] force_directions = new string[] {"Nothing", "Tilt_Right", "Tilt_Left", "Tilt_Forward", "Tilt_Backward" };
+    string[] force_directions = new string[] { "Nothing", "Tilt_Right", "Tilt_Left", "Tilt_Forward", "Tilt_Backward" };
 
     #endregion
 
     private void Start()
     {
+        myData = new DataClass();
         startTime = Time.time;
 
         forceatposbody = new GameObject();
 
-        force_directions = new string[] {"Tilt_Left", "Tilt_Right", "Tilt_Backward", "Tilt_Forward" };
+        force_directions = new string[] { "Tilt_Left", "Tilt_Right", "Tilt_Backward", "Tilt_Forward" };
         trialEnd = true; // For the first ever trial it should be set to true 
 
         // Experimental design 
@@ -158,7 +160,11 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         blockedTrials = new int[2][];
 
         // (0) Represents No Haptics and (1) Represents Haptics
-        blockedTrials[0] = new int[] { 0, 1, 0, 1, 0, 1, 0 ,1};
+        blockedTrials[0] = new int[] { 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 };
+        //blockedTrials[0] = new int[] { 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0 };
+
+        //blockedTrials[0] = new int[] {0, 0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1 };
+        //blockedTrials[0] = new int[] {0, 0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1 };
 
         // (1,2,3,4) represent the 4 different drop offsets 
         blockedTrials[1] = new int[] { 0, 1, 2, 3, 4, 5, 6, 7 };
@@ -186,7 +192,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         catch { print("Something went wrong!"); }
     }
 
-   
+
     void FindGripper()
     {
         try
@@ -224,9 +230,9 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         }
         if (Input.GetKeyDown(KeyCode.R) | startTrial)
         {
-            startRecord = true;
-            if (trialEnd)
-                trial++;
+            startTrial = false;
+
+            trial++;
 
             if (targetCube != null)
             {
@@ -251,8 +257,6 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
                 StopCoroutine(renderSequence);
             }
             renderSequence = StartCoroutine(ExperimentalProcedure());
-
-            startTrial = false;
         }
         //float vrThumbValue = Vector3.Distance(thumbTip.transform.position, palm.transform.position);
         //print("Thumb: " + vrThumbValue);
@@ -286,8 +290,8 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         {
             if (physicsObjects[4] == null)
             {
-                print("Looking for gripper again!"); 
-                FindGripper(); 
+                print("Looking for gripper again!");
+                FindGripper();
             }
 
             #region Orientation Control
@@ -341,22 +345,24 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
             elapsedTime = Time.time - startTime;
 
             // Get the position and rotation of the object and target, as well as Trial info
-            myData.xPos.Add(transform.position.x);
-            myData.yPos.Add(transform.position.y);
-            myData.zPos.Add(transform.position.z);
-            myData.xRot.Add(transform.rotation.x);
-            myData.yRot.Add(transform.rotation.y);
-            myData.zRot.Add(transform.rotation.z);
+            myData.xPos.Add(palm.transform.position.x);
+            myData.yPos.Add(palm.transform.position.y);
+            myData.zPos.Add(palm.transform.position.z);
+            myData.xRot.Add(palm.transform.rotation.x);
+            myData.yRot.Add(palm.transform.rotation.y);
+            myData.zRot.Add(palm.transform.rotation.z);
+
             myData.xTPos.Add(targetCube.transform.position.x);
             myData.yTPos.Add(targetCube.transform.position.y);
             myData.zTPos.Add(targetCube.transform.position.z);
             myData.xTrot.Add(targetCube.transform.rotation.x);
             myData.yTrot.Add(targetCube.transform.rotation.y);
             myData.zTrot.Add(targetCube.transform.rotation.z);
+
             myData.time.Add(elapsedTime);
             myData.trialInfo.Add("Trial " + trialNumber.ToString());
         }
-       
+
 
         if (Input.GetKeyDown(KeyCode.S))
         {
@@ -412,15 +418,17 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
 
     IEnumerator ExperimentalProcedure()
     {
+        startTime = Time.time;
+        startRecord = true;
         int localTrial = trial;
-        int _trial = localTrial % 8; 
-        
+        int _trial = localTrial % 8;
+
         trialEnd = false;
 
         targetHeight.GetComponent<MeshRenderer>().enabled = true;
         // Another loop for blocks (blocks with haptics and without) 
         instructions.text = "Lift object and hold for 2.5 seconds. \nTrial: " + trial;
-        instructions.text = force_directions[blockedTrials[1][_trial]].ToString() + "\nHaptics: " + blockedTrials[0][_trial].ToString();
+        //instructions.text = force_directions[blockedTrials[1][_trial]].ToString() + "\nHaptics: " + blockedTrials[0][_trial].ToString();
 
         // If we reach the target height, trigger the cube falling sequence through the offset mass
         while (targetCube.transform.position.y < targetHeight.position.y)
@@ -462,24 +470,25 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         {
             //targetCube_RB.mass += 0.5f;
             //targetCube_RB.angularVelocity = new Vector3(0f,0f,10f); 
-            dropForce -= 0.15f;
+            dropForce -= 0.05f;
 
             Vector3 offsetPos = new Vector3(transform.position.x + xRand, transform.position.y + 0.015f, transform.position.z + zRand);
             // For debugging, instantiate a visual aid to show where the offset force is being applied
             if (forceatposbody != null)
-                Destroy(forceatposbody); 
+                Destroy(forceatposbody);
             forceatposbody = Instantiate(forcePosBody, targetCube.transform.position + offsetPos, Quaternion.identity);
 
-            targetCube_RB.AddForceAtPosition(new Vector3(0f, dropForce, 0f), targetCube.transform.position + forceatposbody.transform.position, ForceMode.Impulse);
+            targetCube_RB.AddForceAtPosition(new Vector3(0f, dropForce, 0f), targetCube.transform.position + forceatposbody.transform.position, ForceMode.Acceleration);
             yield return null;
         }
-
+        if (forceatposbody != null)
+            Destroy(forceatposbody);
         yield return new WaitForSeconds(1f);
 
         targetCube_RB.velocity = Vector3.zero;
         targetCube_RB.angularVelocity = Vector3.zero;
 
-        if (blockedTrials[0][_trial] == 0)
+        if (blockedTrials[0][trial] == 0)
         {
             // No haptics 
             print("No slip rendering");
@@ -492,9 +501,12 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         instructions.text = "Press button for next trial!";
         trialEnd = true;
 
-        if (forceatposbody != null)
-            Destroy(forceatposbody);
         startRecord = false;
+        if (saveDataCoroutine != null)
+        {
+            StopCoroutine(saveDataCoroutine);
+        }
+        saveDataCoroutine = StartCoroutine(SaveFile());
 
         yield return null;
     }
@@ -558,7 +570,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         try
         {
             // Fixed velocity 
-            serial1.WriteLine("fgfgbnbn"); 
+            serial1.WriteLine("fgfgbnbn");
             serial2.WriteLine("fgfgbnbn");
             Debug.Log("Slipping!");
         }
@@ -572,8 +584,11 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         try
         {
             // Velocity and direction 
-            serial1.WriteLine("fgfgbnbn");
-            serial2.WriteLine("fgfgbnbn");
+            if (targetCube.transform.position.y >= 0.3)
+            {
+
+
+            }
             Debug.Log("Slipping!");
         }
         catch
@@ -609,14 +624,14 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         // Save the data to a file
         if (!threaded)
         {
-            File.WriteAllText(path + "/Data/" + myData.trialInfo + ".json", jsonString);
+            File.WriteAllText(path + "testfile" + ".json", jsonString);
         }
-        else
+        else 
         {
             // create new thread to save the data to a file (only operation that can be done in background)
             new System.Threading.Thread(() =>
             {
-                File.WriteAllText(path + "/Data/" + myData.trialInfo + ".json", jsonString);
+                File.WriteAllText(path + myData.trialInfo.Last() + ".json", jsonString);
             }).Start();
         }
 
