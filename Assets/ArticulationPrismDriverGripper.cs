@@ -170,7 +170,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         blockedTrials[1] = new int[] { 0, 1, 2, 3, 4, 5, 6, 7 };
 
         // Randomly shuffle the conditions for each participant once at the start 
-        Shuffle(blockedTrials[0]);
+        //Shuffle(blockedTrials[0]);
         Shuffle(blockedTrials[1]);
 
         fingerOpenState = new float[5] { 1f, 1f, 1f, 1f, 1f };
@@ -483,10 +483,6 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         }
         if (forceatposbody != null)
             Destroy(forceatposbody);
-        yield return new WaitForSeconds(1f);
-
-        targetCube_RB.velocity = Vector3.zero;
-        targetCube_RB.angularVelocity = Vector3.zero;
 
         if (blockedTrials[0][trial] == 0)
         {
@@ -497,6 +493,11 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         {
             SlipMethod1();
         }
+
+        yield return new WaitForSeconds(1f);
+
+        targetCube_RB.velocity = Vector3.zero;
+        targetCube_RB.angularVelocity = Vector3.zero;
 
         instructions.text = "Press button for next trial!";
         trialEnd = true;
@@ -624,14 +625,14 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         // Save the data to a file
         if (!threaded)
         {
-            File.WriteAllText(path + "testfile" + ".json", jsonString);
+            File.WriteAllText(path + "testfile" + trial.ToString() + ".json", jsonString);
         }
         else 
         {
             // create new thread to save the data to a file (only operation that can be done in background)
             new System.Threading.Thread(() =>
             {
-                File.WriteAllText(path + myData.trialInfo.Last() + ".json", jsonString);
+                File.WriteAllText(path + "testfile" + trial.ToString() + ".json", jsonString);
             }).Start();
         }
 
