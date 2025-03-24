@@ -160,8 +160,10 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         blockedTrials = new int[2][];
 
         // (0) Represents No Haptics and (1) Represents Haptics
-        blockedTrials[0] = new int[] { 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 };
+        //blockedTrials[0] = new int[] { 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 };
         //blockedTrials[0] = new int[] { 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0 };
+        blockedTrials[0] = new int[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+
 
         //blockedTrials[0] = new int[] {0, 0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1 };
         //blockedTrials[0] = new int[] {0, 0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1 };
@@ -491,7 +493,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         }
         else
         {
-            SlipMethod1();
+            SlipMethod3(forceatposbody.transform.position);
         }
 
         yield return new WaitForSeconds(1f);
@@ -591,6 +593,61 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
 
             }
             Debug.Log("Slipping!");
+        }
+        catch
+        {
+            print("Serial device error!");
+        }
+    }
+
+
+    void SlipMethod3(Vector3 slipPivot) // i.e. our forceatposbody 
+    {
+        try
+        {
+            // Get the direction from the palm to the pivot (projected on the XZ plane)
+            Vector3 pivot = slipPivot;
+            Vector3 palmForward = new Vector3(palm.transform.forward.x, 0, palm.transform.forward.z).normalized;
+            Vector3 toPivot = (new Vector3(pivot.x, 0, pivot.z) - new Vector3(palm.transform.position.x, 0, palm.transform.position.z)).normalized;
+
+            // Determine the angle between palm forward and the vector to the pivot
+            float angle = Vector3.Angle(palmForward, toPivot);
+            // Use the cross product to decide if the pivot is to the right or left of the palm forward
+            float crossY = Vector3.Cross(palmForward, toPivot).y;
+
+            string command = "";
+            if (angle < 45f)
+            {
+                // Slip direction roughly matches palm forward  actuate index finger ("b")
+                command = "b";
+                Debug.Log("Index Slip");
+            }
+            else if (angle > 135f)
+            {
+                // Slip is opposite to palm forward  actuate middle finger ("g")
+                command = "g";
+                Debug.Log("Middle Slip");
+            }
+            else
+            {
+                if (crossY > 0)
+                {
+                    // Pivot is to the right  actuate thumb ("f")
+                    command = "f";
+                    Debug.Log("Thumb Slip");
+                }
+                else
+                {
+                    // Pivot is to the left  actuate ring finger ("n")
+                    command = "n";
+                    Debug.Log("Ring Slip");
+                }
+            }
+
+            // Send the haptic command to both serial devices
+            serial1.WriteLine(command);
+            serial2.WriteLine(command);
+            Debug.Log("Haptic slip command: " + command);
         }
         catch
         {

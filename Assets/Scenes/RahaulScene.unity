@@ -9254,7 +9254,7 @@ MonoBehaviour:
   threaded: 1
   path: C:\Users\SyMoN\Desktop\H2B\Data\
   Comport1: COM3
-  Comport2: COM5
+  Comport2: COM4
   TargetObj: {fileID: 2887062428159178312, guid: a13fd3a1abf41ea499358be38b624360, type: 3}
   offsetMassObj: {fileID: 6631847692577947236, guid: 19d00dbc4fa479441adaa2126334c147, type: 3}
   targetOffsetMass: 100
