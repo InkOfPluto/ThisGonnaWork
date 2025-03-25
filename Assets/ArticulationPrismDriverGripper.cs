@@ -23,6 +23,7 @@ public class DataClass
     public List<float> yTrot = new List<float>();
     public List<float> zTrot = new List<float>();
     public List<float> time = new List<float>();
+    public List<string> events = new List<string>();
 
     public DataClass()
     {
@@ -74,6 +75,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
     private int trialNumber = 0;
     private float startTime;
     private float elapsedTime = 0f;
+    private string trial_events;
 
     private bool startRecord = false;
 
@@ -108,7 +110,10 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
     // Tip gameObjects for calculating the relative distance from tip to palm, let me know what you think.
     public GameObject thumbTip, indexTip, midTip, ringTip, palm;
 
+    public Transform pivot;
+
     public TMPro.TMP_Text instructions;
+    bool touched = true;
 
     // Close states for the mapping function, not sure about the value might have to think about it again.
     //public ArticulationBody tmb, index, mid, ring;
@@ -138,8 +143,9 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
     public GameObject forcePosBody;
     GameObject forceatposbody; // = new GameObject();
 
-    string[] force_directions = new string[] { "Nothing", "Tilt_Right", "Tilt_Left", "Tilt_Forward", "Tilt_Backward" };
-
+    string[] force_directions = new string[] { "North_North", "North_West", "North_East", "Tilt_Forward", "Tilt_Backward" };
+    int _trial = 0;
+    public string ptxID = "test"; 
     #endregion
 
     private void Start()
@@ -169,7 +175,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         //blockedTrials[0] = new int[] {0, 0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1 };
 
         // (1,2,3,4) represent the 4 different drop offsets 
-        blockedTrials[1] = new int[] { 0, 1, 2, 3, 4, 5, 6, 7 };
+        blockedTrials[1] = new int[] { 0, 1, 2, 3, 4, 5, 6 };
 
         // Randomly shuffle the conditions for each participant once at the start 
         //Shuffle(blockedTrials[0]);
@@ -185,8 +191,8 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
 
         try
         {
-            serial1 = new SerialPort(Comport1, 115200);
-            serial2 = new SerialPort(Comport2, 115200);
+            serial1 = new SerialPort("COM3", 115200);
+            serial2 = new SerialPort("COM4", 115200);
 
             serial1.Open();
             serial2.Open();
@@ -220,6 +226,9 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
 
     private void Update()
     {
+
+        //print(palm.transform.eulerAngles); 
+
         // Get distances between fingertips and the palm for open and closed hand states
         if (Input.GetKeyDown(KeyCode.O))
         {
@@ -353,7 +362,9 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
             myData.xRot.Add(palm.transform.rotation.x);
             myData.yRot.Add(palm.transform.rotation.y);
             myData.zRot.Add(palm.transform.rotation.z);
-
+            
+            myData.events.Add(trial_events);
+            
             myData.xTPos.Add(targetCube.transform.position.x);
             myData.yTPos.Add(targetCube.transform.position.y);
             myData.zTPos.Add(targetCube.transform.position.z);
@@ -362,7 +373,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
             myData.zTrot.Add(targetCube.transform.rotation.z);
 
             myData.time.Add(elapsedTime);
-            myData.trialInfo.Add("Trial " + trialNumber.ToString());
+            myData.trialInfo.Add("PtxID_" + ptxID + "_trial_" + trialNumber.ToString() + "_forcedirection_" + force_directions[blockedTrials[1][_trial]]); // The index of the force_direction variable needs to match the blocktraial[1] condition 
         }
 
 
@@ -423,9 +434,11 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         startTime = Time.time;
         startRecord = true;
         int localTrial = trial;
-        int _trial = localTrial % 8;
+        _trial = localTrial % 7;
 
         trialEnd = false;
+
+        trial_events = "start";
 
         targetHeight.GetComponent<MeshRenderer>().enabled = true;
         // Another loop for blocks (blocks with haptics and without) 
@@ -435,6 +448,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         // If we reach the target height, trigger the cube falling sequence through the offset mass
         while (targetCube.transform.position.y < targetHeight.position.y)
         {
+            trial_events = "lifting";
             yield return null;
         }
 
@@ -445,6 +459,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         {
             if (targetCube.transform.position.y >= targetHeight.position.y)
             {
+                trial_events = "holding";
                 holdAtHeightTime += Time.deltaTime;
                 instructions.text = "Hold time: " + holdAtHeightTime.ToString("F3") + "/ 2.5 seconds \n" + "Trial: " + trial;
                 targetHeight.GetComponent<MeshRenderer>().enabled = false;
@@ -473,7 +488,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
             //targetCube_RB.mass += 0.5f;
             //targetCube_RB.angularVelocity = new Vector3(0f,0f,10f); 
             dropForce -= 0.05f;
-
+            trial_events = "dropping";
             Vector3 offsetPos = new Vector3(transform.position.x + xRand, transform.position.y + 0.015f, transform.position.z + zRand);
             // For debugging, instantiate a visual aid to show where the offset force is being applied
             if (forceatposbody != null)
@@ -493,13 +508,33 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         }
         else
         {
-            SlipMethod3(forceatposbody.transform.position);
+            SlipMethod3(blockedTrials[1][_trial]);
         }
 
         yield return new WaitForSeconds(1f);
 
+        touched = false;
         targetCube_RB.velocity = Vector3.zero;
         targetCube_RB.angularVelocity = Vector3.zero;
+        Destroy(targetCube);
+
+
+        while (touched == false)
+        {
+            trial_events = "regrasping";
+            instructions.text = "Regrasp the Object.";
+
+
+
+            if (targetCube.transform.position.y > targetHeight.transform.position.y)
+            {
+                touched = true;
+            }
+            yield return null; 
+        }
+
+        trial_events = "grasped";
+
 
         instructions.text = "Press button for next trial!";
         trialEnd = true;
@@ -520,42 +555,42 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         float zRand = 0f;
         float[] result = new float[2] { 0f, 0f };
 
-        if (blockedTrials[1][_trial] == 0) // East (positive) x-axis positional offset for applied force 
-        {
-            xRand = 0.02f;
-            zRand = 0f;
-        }
-        if (blockedTrials[1][_trial] == 1) // West (negative) x-axis positional offset for applied force 
+        //if (blockedTrials[1][_trial] == 0) // East (positive) x-axis positional offset for applied force 
+        //{
+        //    xRand = 0.02f;
+        //    zRand = 0f;
+        //}
+        if (blockedTrials[1][_trial] == 0) // West (negative) x-axis positional offset for applied force 
         {
             xRand = -0.02f;
             zRand = 0f;
         }
-        if (blockedTrials[1][_trial] == 2) // North (positive) z-axis positional offset for applied force 
+        if (blockedTrials[1][_trial] == 1) // North (positive) z-axis positional offset for applied force 
         {
             xRand = 0f;
             zRand = 0.02f;
         }
-        if (blockedTrials[1][_trial] == 3) // South (negative) z-axis positional offset for applied force 
+        if (blockedTrials[1][_trial] == 2) // NNW (negative) z-axis positional offset for applied force 
         {
-            xRand = 0f;
-            zRand = -0.02f;
+            xRand = -0.015f;
+            zRand = 0.02f;
         }
-        if (blockedTrials[1][_trial] == 4) // NE (positive) x-axis positional offset for applied force 
+        if (blockedTrials[1][_trial] == 3) // NE (positive) x-axis positional offset for applied force 
         {
             xRand = 0.01f;
             zRand = 0.01f;
         }
-        if (blockedTrials[1][_trial] == 5) // NW (negative) x-axis positional offset for applied force 
-        {
-            xRand = 0.01f;
-            zRand = -0.01f;
-        }
-        if (blockedTrials[1][_trial] == 6) // SE (positive) z-axis positional offset for applied force 
+        if (blockedTrials[1][_trial] == 4) // NW (negative) x-axis positional offset for applied force 
         {
             xRand = -0.01f;
             zRand = 0.01f;
         }
-        if (blockedTrials[1][_trial] == 7) // SW (negative) z-axis positional offset for applied force 
+        if (blockedTrials[1][_trial] == 5) // SE (positive) z-axis positional offset for applied force 
+        {
+            xRand = 0.01f;
+            zRand = -0.01f;
+        }
+        if (blockedTrials[1][_trial] == 6) // SW (negative) z-axis positional offset for applied force 
         {
             xRand = -0.01f;
             zRand = -0.01f;
@@ -599,55 +634,43 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
             print("Serial device error!");
         }
     }
-
-
-    void SlipMethod3(Vector3 slipPivot) // i.e. our forceatposbody 
+ 
+    void SlipMethod3(int bTrial) // i.e. our forceatposbody 
     {
         try
         {
-            // Get the direction from the palm to the pivot (projected on the XZ plane)
-            Vector3 pivot = slipPivot;
-            Vector3 palmForward = new Vector3(palm.transform.forward.x, 0, palm.transform.forward.z).normalized;
-            Vector3 toPivot = (new Vector3(pivot.x, 0, pivot.z) - new Vector3(palm.transform.position.x, 0, palm.transform.position.z)).normalized;
-
-            // Determine the angle between palm forward and the vector to the pivot
-            float angle = Vector3.Angle(palmForward, toPivot);
-            // Use the cross product to decide if the pivot is to the right or left of the palm forward
-            float crossY = Vector3.Cross(palmForward, toPivot).y;
-
-            string command = "";
-            if (angle < 45f)
+            if (bTrial == 0) // West (negative) x-axis positional offset for applied force 
             {
-                // Slip direction roughly matches palm forward  actuate index finger ("b")
-                command = "b";
-                Debug.Log("Index Slip");
+                serial1.WriteLine("f");
+                serial2.WriteLine("f");
             }
-            else if (angle > 135f)
+            if (bTrial == 1) // North (positive) z-axis positional offset for applied force 
             {
-                // Slip is opposite to palm forward  actuate middle finger ("g")
-                command = "g";
-                Debug.Log("Middle Slip");
+                serial1.WriteLine("g");
             }
-            else
+            if (bTrial== 2) // NNW (negative) z-axis positional offset for applied force 
             {
-                if (crossY > 0)
-                {
-                    // Pivot is to the right  actuate thumb ("f")
-                    command = "f";
-                    Debug.Log("Thumb Slip");
-                }
-                else
-                {
-                    // Pivot is to the left  actuate ring finger ("n")
-                    command = "n";
-                    Debug.Log("Ring Slip");
-                }
+                serial1.WriteLine("f");
+                serial1.WriteLine("g");
+            }
+            if (bTrial == 3) // NE (positive) x-axis positional offset for applied force 
+            {
+                serial1.WriteLine("g");
+                serial2.WriteLine("g");
+            }
+            if (bTrial == 4) // NW (negative) x-axis positional offset for applied force 
+            {
+                serial1.WriteLine("f");
+            }
+            if (bTrial == 5) // SE (positive) z-axis positional offset for applied force 
+            {
+                serial2.WriteLine("g");
+            }
+            if (bTrial == 6) // SW (negative) z-axis positional offset for applied force 
+            {
+                serial2.WriteLine("f");
             }
 
-            // Send the haptic command to both serial devices
-            serial1.WriteLine(command);
-            serial2.WriteLine(command);
-            Debug.Log("Haptic slip command: " + command);
         }
         catch
         {
