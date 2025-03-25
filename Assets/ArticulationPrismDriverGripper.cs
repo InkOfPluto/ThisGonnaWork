@@ -143,7 +143,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
     public GameObject forcePosBody;
     GameObject forceatposbody; // = new GameObject();
 
-    string[] force_directions = new string[] { "North_North", "North_West", "North_East", "Tilt_Forward", "Tilt_Backward" };
+    string[] force_directions = new string[] { "West", "North_North", "North_North_West", "North_East", "North_West", "South_East", "South_West" };
     int _trial = 0;
     public string ptxID = "test"; 
     #endregion
@@ -249,14 +249,8 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
             {
                 Destroy(targetCube);
             }
-            if (offsetMass != null)
-            {
-                Destroy(offsetMass);
-            }
             targetCube = Instantiate(TargetObj);
             targetCube_RB = targetCube.GetComponent<Rigidbody>();
-            //offsetMass = Instantiate(offsetMassObj);
-            //targetCube.GetComponent<FixedJoint>().connectedBody = offsetMass.GetComponent<Rigidbody>();
             originalMass = targetCube_RB.mass;
             targetCube_RB.velocity = Vector3.zero;
             targetCube_RB.angularVelocity = Vector3.zero;
@@ -516,7 +510,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         touched = false;
         targetCube_RB.velocity = Vector3.zero;
         targetCube_RB.angularVelocity = Vector3.zero;
-        Destroy(targetCube);
+        
 
 
         while (touched == false)
@@ -524,9 +518,19 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
             trial_events = "regrasping";
             instructions.text = "Regrasp the Object.";
 
+            if (targetCube != null)
+            {
+                Destroy(targetCube);
+            }
+            targetCube = Instantiate(TargetObj);
+            targetCube_RB = targetCube.GetComponent<Rigidbody>();
+            originalMass = targetCube_RB.mass;
+            targetCube_RB.velocity = Vector3.zero;
+            targetCube_RB.angularVelocity = Vector3.zero;
+            originalPosition = targetCube.transform.position;
+            originalRotation = targetCube.transform.rotation;
 
-
-            if (targetCube.transform.position.y > targetHeight.transform.position.y)
+            if (targetCube.transform.position.y > 1)
             {
                 touched = true;
             }
