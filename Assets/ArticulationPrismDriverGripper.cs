@@ -68,6 +68,8 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
     #region Variables
     public DataClass myData;
 
+    public AudioSource disolveSound;
+
     public bool threaded = true;
 
     public string path;
@@ -86,6 +88,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
     private SerialPort serial2;
     public GameObject TargetObj, offsetMassObj;
     private GameObject targetCube, offsetMass;
+    private Vector3 targetCubeTransform;
     float originalMass = 0f;
     public float targetOffsetMass = 2f;
     public Transform targetHeight;
@@ -110,10 +113,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
     // Tip gameObjects for calculating the relative distance from tip to palm, let me know what you think.
     public GameObject thumbTip, indexTip, midTip, ringTip, palm;
 
-    public Transform pivot;
-
     public TMPro.TMP_Text instructions;
-    bool touched = true;
 
     // Close states for the mapping function, not sure about the value might have to think about it again.
     //public ArticulationBody tmb, index, mid, ring;
@@ -143,9 +143,13 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
     public GameObject forcePosBody;
     GameObject forceatposbody; // = new GameObject();
 
-    string[] force_directions = new string[] { "West", "North_North", "North_North_West", "North_East", "North_West", "South_East", "South_West" };
+    string[] force_directions; 
     int _trial = 0;
-    public string ptxID = "test"; 
+    public string ptxID = "test";
+    bool regrasped = false; // Touched the targetcube again 
+
+    private static readonly int DissolvePropertyID = Shader.PropertyToID("Vector1_FEFF47F1");
+
     #endregion
 
     private void Start()
@@ -155,7 +159,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
 
         forceatposbody = new GameObject();
 
-        force_directions = new string[] { "Tilt_Left", "Tilt_Right", "Tilt_Backward", "Tilt_Forward" };
+        force_directions = new string[] { "West_West", "North_North", "NorthNorth_West", "North_East", "North_West", "South_East", "South_West" };
         trialEnd = true; // For the first ever trial it should be set to true 
 
         // Experimental design 
@@ -249,11 +253,25 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
             {
                 Destroy(targetCube);
             }
+            if (offsetMass != null)
+            {
+                Destroy(offsetMass);
+            }
             targetCube = Instantiate(TargetObj);
+            targetCubeTransform = targetCube.transform.position;
             targetCube_RB = targetCube.GetComponent<Rigidbody>();
+            
+            // Ensure proper physics setup
+            targetCube_RB.useGravity = true;
+            targetCube_RB.isKinematic = false;
+            targetCube_RB.interpolation = RigidbodyInterpolation.None;  // Disable interpolation during setup
+            targetCube_RB.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            
             originalMass = targetCube_RB.mass;
             targetCube_RB.velocity = Vector3.zero;
             targetCube_RB.angularVelocity = Vector3.zero;
+            
+            // Store the initial state more explicitly
             originalPosition = targetCube.transform.position;
             originalRotation = targetCube.transform.rotation;
 
@@ -423,6 +441,28 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         return fingerstate;
     }
 
+
+    private void OnEnable()
+    {
+        // Subscribe to the event when the component is enabled
+        BroadcastTouch.OnObjectTouched += HandleObjectTouched;
+    }
+
+    private void OnDisable()
+    {
+        // Unsubscribe from the event when the component is disabled
+        BroadcastTouch.OnObjectTouched -= HandleObjectTouched;
+    }
+
+    private void HandleObjectTouched(GameObject touchedObject)
+    {
+        // This method will be called whenever an object with BroadcastTouch is touched
+        Debug.Log($"Object touched: {touchedObject.name}");
+        
+        regrasped = true;
+    }
+
+
     IEnumerator ExperimentalProcedure()
     {
         startTime = Time.time;
@@ -430,9 +470,13 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         int localTrial = trial;
         _trial = localTrial % 7;
 
+        Material targetMaterial = targetCube.GetComponent<Renderer>().material;
+        targetMaterial.SetFloat(DissolvePropertyID, 0f);
+
         trialEnd = false;
 
-        trial_events = "start";
+        trial_events = "trialstart";
+        yield return null;
 
         targetHeight.GetComponent<MeshRenderer>().enabled = true;
         // Another loop for blocks (blocks with haptics and without) 
@@ -453,13 +497,14 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         {
             if (targetCube.transform.position.y >= targetHeight.position.y)
             {
-                trial_events = "holding";
+                trial_events = "holdingabove";
                 holdAtHeightTime += Time.deltaTime;
                 instructions.text = "Hold time: " + holdAtHeightTime.ToString("F3") + "/ 2.5 seconds \n" + "Trial: " + trial;
                 targetHeight.GetComponent<MeshRenderer>().enabled = false;
             }
             else
             {
+                trial_events = "holdingbelow";
                 holdAtHeightTime = 0f;
                 targetHeight.GetComponent<MeshRenderer>().enabled = true;
                 trialEnd = false;
@@ -495,6 +540,8 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         if (forceatposbody != null)
             Destroy(forceatposbody);
 
+        trial_events = "hapticfeedback";
+        yield return null;
         if (blockedTrials[0][trial] == 0)
         {
             // No haptics 
@@ -505,53 +552,95 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
             SlipMethod3(blockedTrials[1][_trial]);
         }
 
+
+        trial_events = "resettarget";
         yield return new WaitForSeconds(1f);
 
-        touched = false;
+        // Reset the target cube to its original position and rotation
+        // First, completely disable physics
+        targetCube_RB.isKinematic = true;
+        
+        // Reset all physics states
+        targetCube_RB.velocity = Vector3.zero;
+        targetCube_RB.angularVelocity = Vector3.zero;
+        targetCube_RB.ResetInertiaTensor();  // Reset the inertia tensor
+        targetCube_RB.Sleep();  // Put the rigidbody to sleep
+        
+        // Reset position and rotation using the stored original values
+        Debug.Log("Before position reset: " + targetCube.transform.position);
+        targetCube.transform.position = originalPosition;
+        targetCube.transform.rotation = originalRotation;
+        Debug.Log("Immediately after reset: " + targetCube.transform.position);
+        
+        // Wait a frame to ensure transform changes are applied
+        yield return null;
+        Debug.Log("After one frame: " + targetCube.transform.position);
+        
+        // Re-enable physics with a fresh state
+        targetCube_RB.WakeUp();
+        targetCube_RB.isKinematic = false;
+        Debug.Log("After re-enabling physics: " + targetCube.transform.position);
+        
+        // Ensure no residual forces
         targetCube_RB.velocity = Vector3.zero;
         targetCube_RB.angularVelocity = Vector3.zero;
         
-
-
-        while (touched == false)
+        // Wait another frame to ensure physics is stable
+        yield return new WaitForFixedUpdate();
+        Debug.Log("After physics update: " + targetCube.transform.position);
+        
+        // Double-check position and rotation
+        targetCube.transform.position = originalPosition;
+        targetCube.transform.rotation = originalRotation;
+        
+        // Regrasp sequence
+        instructions.text = "Grasp the object again.";
+        
+        // Reset the regrasped flag before waiting for it
+        regrasped = false;
+        trial_events = "regrasping";
+        while (!regrasped)
         {
-            trial_events = "regrasping";
-            instructions.text = "Regrasp the Object.";
-
-            if (targetCube != null)
-            {
-                Destroy(targetCube);
-            }
-            targetCube = Instantiate(TargetObj);
-            targetCube_RB = targetCube.GetComponent<Rigidbody>();
-            originalMass = targetCube_RB.mass;
-            targetCube_RB.velocity = Vector3.zero;
-            targetCube_RB.angularVelocity = Vector3.zero;
-            originalPosition = targetCube.transform.position;
-            originalRotation = targetCube.transform.rotation;
-
-            if (targetCube.transform.position.y > 1)
-            {
-                touched = true;
-            }
-            yield return null; 
+            yield return null;
         }
+        trial_events = "trialend";
+        yield return null;
+        regrasped = false;
+        
 
-        trial_events = "grasped";
-
+        disolveSound.Play();
+        // Gradually dissolve the object over 2 seconds
+        
+        float dissolveTime = 1.0f;
+        float elapsedDissolveTime = 0f;
+        
+        while (elapsedDissolveTime < dissolveTime)
+        {
+            float dissolveAmount = Mathf.Lerp(0f, 1f, elapsedDissolveTime / dissolveTime);
+            targetMaterial.SetFloat(DissolvePropertyID, dissolveAmount);
+            elapsedDissolveTime += Time.deltaTime;
+            yield return null;
+        }
+        
+        // Ensure we reach full dissolution
+        targetMaterial.SetFloat(DissolvePropertyID, 1f);
+        yield return new WaitForSeconds(disolveSound.clip.length);
 
         instructions.text = "Press button for next trial!";
         trialEnd = true;
 
         startRecord = false;
+        Destroy(targetCube);
         if (saveDataCoroutine != null)
         {
             StopCoroutine(saveDataCoroutine);
         }
         saveDataCoroutine = StartCoroutine(SaveFile());
 
+
         yield return null;
     }
+
 
     float[] DeterminePositionalOffset(int _trial)
     {
@@ -614,23 +703,6 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
             // Fixed velocity 
             serial1.WriteLine("fgfgbnbn");
             serial2.WriteLine("fgfgbnbn");
-            Debug.Log("Slipping!");
-        }
-        catch
-        {
-            print("Serial device error!");
-        }
-    }
-    void SlipMethod2()
-    {
-        try
-        {
-            // Velocity and direction 
-            if (targetCube.transform.position.y >= 0.3)
-            {
-
-
-            }
             Debug.Log("Slipping!");
         }
         catch

@@ -6,6 +6,7 @@ using UnityEngine.Events;
 public class ButtonTriggerBroadcast : MonoBehaviour
 {
     public UnityEvent<float> buttonEvent = new UnityEvent<float>();
+    public AudioSource buttonPress; 
 
     public MeshRenderer buttonMesh;
     Color origColor;
@@ -22,6 +23,7 @@ public class ButtonTriggerBroadcast : MonoBehaviour
         if(other.gameObject.tag == "button")
         {
             buttonEvent.Invoke(0.0f);
+            buttonPress.Play(); 
         }
     }
 
