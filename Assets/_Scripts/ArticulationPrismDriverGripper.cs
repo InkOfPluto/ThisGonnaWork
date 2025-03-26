@@ -247,8 +247,6 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         {
             startTrial = false;
 
-            trial++;
-
             if (targetCube != null)
             {
                 Destroy(targetCube);
@@ -257,29 +255,37 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
             {
                 Destroy(offsetMass);
             }
+            
             targetCube = Instantiate(TargetObj);
             targetCubeTransform = targetCube.transform.position;
             targetCube_RB = targetCube.GetComponent<Rigidbody>();
-            
+
             // Ensure proper physics setup
             targetCube_RB.useGravity = true;
             targetCube_RB.isKinematic = false;
             targetCube_RB.interpolation = RigidbodyInterpolation.None;  // Disable interpolation during setup
             targetCube_RB.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
-            
+
             originalMass = targetCube_RB.mass;
             targetCube_RB.velocity = Vector3.zero;
             targetCube_RB.angularVelocity = Vector3.zero;
-            
+
             // Store the initial state more explicitly
             originalPosition = targetCube.transform.position;
             originalRotation = targetCube.transform.rotation;
 
-            if (renderSequence != null)
+            if (!startRecord)
             {
-                StopCoroutine(renderSequence);
+                trial++;
+
+
+
+                if (renderSequence != null)
+                {
+                    StopCoroutine(renderSequence);
+                }
+                renderSequence = StartCoroutine(ExperimentalProcedure());
             }
-            renderSequence = StartCoroutine(ExperimentalProcedure());
         }
         //float vrThumbValue = Vector3.Distance(thumbTip.transform.position, palm.transform.position);
         //print("Thumb: " + vrThumbValue);
@@ -374,9 +380,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
             myData.xRot.Add(palm.transform.rotation.x);
             myData.yRot.Add(palm.transform.rotation.y);
             myData.zRot.Add(palm.transform.rotation.z);
-            
-            myData.events.Add(trial_events);
-            
+                        
             myData.xTPos.Add(targetCube.transform.position.x);
             myData.yTPos.Add(targetCube.transform.position.y);
             myData.zTPos.Add(targetCube.transform.position.z);
@@ -384,8 +388,9 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
             myData.yTrot.Add(targetCube.transform.rotation.y);
             myData.zTrot.Add(targetCube.transform.rotation.z);
 
+            myData.events.Add(trial_events);
             myData.time.Add(elapsedTime);
-            myData.trialInfo.Add("PtxID_" + ptxID + "_trial_" + trialNumber.ToString() + "_forcedirection_" + force_directions[blockedTrials[1][_trial]]); // The index of the force_direction variable needs to match the blocktraial[1] condition 
+            myData.trialInfo.Add("PtxID_" + ptxID + "_trial_" + trial.ToString() + "_forcedirection_" + force_directions[blockedTrials[1][_trial]]); // The index of the force_direction variable needs to match the blocktraial[1] condition 
         }
 
 
@@ -396,7 +401,6 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
                 StopCoroutine(saveDataCoroutine);
             }
             saveDataCoroutine = StartCoroutine(SaveFile());
-            trialNumber++;
             startTime = Time.time;
         }
     }
