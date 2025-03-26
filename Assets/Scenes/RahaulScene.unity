@@ -9440,7 +9440,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   disolveSound: {fileID: 1606184231}
-  threaded: 1
+  threaded: 0
   path: C:\Users\SyMoN\Desktop\H2B\Data\
   Comport1: COM3
   Comport2: COM4

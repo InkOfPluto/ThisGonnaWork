@@ -41,6 +41,7 @@ public class DataClass
         yTrot = new List<float>();
         zTrot = new List<float>();
         time = new List<float>();
+        events = new List<string>();
     }
 
     public void ClearAllVars()
@@ -59,6 +60,7 @@ public class DataClass
         yTrot.Clear();
         zTrot.Clear();
         time.Clear();
+        events.Clear();
     }
 
 }
@@ -784,18 +786,9 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
 
         // Save the data to a file
         string fileName = "PtxID_" + ptxID + "_trial_" + trialNumber.ToString() + "_forcedirection_" + force_directions[blockedTrials[1][_trial]]; 
-        if (!threaded)
-        {
-            File.WriteAllText(path + fileName + ".json", jsonString);
-        }
-        else 
-        {
-            // create new thread to save the data to a file (only operation that can be done in background)
-            new System.Threading.Thread(() =>
-            {
-                File.WriteAllText(path + fileName + ".json", jsonString);
-            }).Start();
-        }
+
+        File.WriteAllText(path + fileName + ".json", jsonString);
+
 
         // Empty text fields for next trials (potential for issues with next trial)
         myData.ClearAllVars();
