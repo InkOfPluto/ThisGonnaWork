@@ -170,9 +170,9 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         blockedTrials = new int[2][];
 
         // (0) Represents No Haptics and (1) Represents Haptics
-        //blockedTrials[0] = new int[] { 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 };
+        blockedTrials[0] = new int[] { 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1 };
         //blockedTrials[0] = new int[] { 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0 };
-        blockedTrials[0] = new int[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
+        //blockedTrials[0] = new int[] { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1};
 
 
         //blockedTrials[0] = new int[] {0, 0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,1,1,1 };
@@ -732,7 +732,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
             if (bTrial == 3) // NE (positive) x-axis positional offset for applied force 
             {
                 serial1.WriteLine("g");
-                serial2.WriteLine("g");
+                serial2.WriteLine("n");
             }
             if (bTrial == 4) // NW (negative) x-axis positional offset for applied force 
             {
@@ -740,7 +740,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
             }
             if (bTrial == 5) // SE (positive) z-axis positional offset for applied force 
             {
-                serial2.WriteLine("g");
+                serial2.WriteLine("n");
             }
             if (bTrial == 6) // SW (negative) z-axis positional offset for applied force 
             {

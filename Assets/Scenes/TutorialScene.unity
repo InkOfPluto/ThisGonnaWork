@@ -9465,7 +9465,7 @@ MonoBehaviour:
   dropForce: -0.05
   startTrial: 0
   forcePosBody: {fileID: 4442982518268232948, guid: f1f09e063c2dc9344a728efe60687b37, type: 3}
-  ptxID: Pilot_2
+  ptxID: diar
 --- !u!1 &1575687044
 GameObject:
   m_ObjectHideFlags: 0
@@ -15758,10 +15758,6 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 6
       objectReference: {fileID: 0}
-    - target: {fileID: 3223329250953697788, guid: 295d59794c9266244a09854db56bd201, type: 3}
-      propertyPath: m_IsActive
-      value: 1
-      objectReference: {fileID: 0}
     - target: {fileID: 3367256114043782730, guid: 295d59794c9266244a09854db56bd201, type: 3}
       propertyPath: m_Layer
       value: 6
@@ -16021,10 +16017,6 @@ PrefabInstance:
     - target: {fileID: 7815334331809706289, guid: 295d59794c9266244a09854db56bd201, type: 3}
       propertyPath: m_Layer
       value: 6
-      objectReference: {fileID: 0}
-    - target: {fileID: 7815334331809706289, guid: 295d59794c9266244a09854db56bd201, type: 3}
-      propertyPath: m_IsActive
-      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 7884284639431155658, guid: 295d59794c9266244a09854db56bd201, type: 3}
       propertyPath: m_Layer
