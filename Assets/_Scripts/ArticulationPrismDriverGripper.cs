@@ -723,26 +723,26 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         {
             if (bTrial == 0) // West (negative) x-axis positional offset for applied force 
             {
-                serial1.WriteLine("f");
-                serial2.WriteLine("f");
+                serial1.WriteLine("b");
+                serial2.WriteLine("b");
             }
             if (bTrial == 1) // North (positive) z-axis positional offset for applied force 
             {
-                serial1.WriteLine("g");
+                serial1.WriteLine("n");
             }
             if (bTrial== 2) // NNW (negative) z-axis positional offset for applied force 
             {
-                serial1.WriteLine("f");
-                serial1.WriteLine("g");
+                serial1.WriteLine("b");
+                serial1.WriteLine("n");
             }
             if (bTrial == 3) // NE (positive) x-axis positional offset for applied force 
             {
-                serial1.WriteLine("g");
+                serial1.WriteLine("n");
                 serial2.WriteLine("n");
             }
             if (bTrial == 4) // NW (negative) x-axis positional offset for applied force 
             {
-                serial1.WriteLine("f");
+                serial1.WriteLine("b");
             }
             if (bTrial == 5) // SE (positive) z-axis positional offset for applied force 
             {
@@ -750,7 +750,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
             }
             if (bTrial == 6) // SW (negative) z-axis positional offset for applied force 
             {
-                serial2.WriteLine("f");
+                serial2.WriteLine("b");
             }
 
         }
@@ -785,7 +785,7 @@ public class ArticulationPrismDriverGripper : MonoBehaviour
         string jsonString = JsonConvert.SerializeObject(myData, Formatting.Indented);
 
         // Save the data to a file
-        string fileName = "PtxID_" + ptxID + "_trial_" + trialNumber.ToString() + "_forcedirection_" + force_directions[blockedTrials[1][_trial]]; 
+        string fileName = "PtxID_" + ptxID + "_trial_" + trial.ToString() + "_forcedirection_" + force_directions[blockedTrials[1][_trial]]; 
 
         File.WriteAllText(path + fileName + ".json", jsonString);
 

@@ -9441,9 +9441,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   disolveSound: {fileID: 1606184231}
   threaded: 0
-  path: C:\Users\SyMoN\Desktop\H2B\H2B_MotionBridge\Data
+  path: C:\Users\SyMoN\Desktop\H2B\H2B_MotionBridge\Data\
   Comport1: COM3
-  Comport2: COM4
+  Comport2: COM5
   TargetObj: {fileID: 2887062428159178312, guid: a13fd3a1abf41ea499358be38b624360, type: 3}
   offsetMassObj: {fileID: 6631847692577947236, guid: 19d00dbc4fa479441adaa2126334c147, type: 3}
   targetOffsetMass: 100
@@ -9465,7 +9465,7 @@ MonoBehaviour:
   dropForce: -0.05
   startTrial: 0
   forcePosBody: {fileID: 4442982518268232948, guid: f1f09e063c2dc9344a728efe60687b37, type: 3}
-  ptxID: P01
+  ptxID: pilot3
 --- !u!1 &1575687044
 GameObject:
   m_ObjectHideFlags: 0
