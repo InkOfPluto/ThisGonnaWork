@@ -17,6 +17,7 @@ TagManager:
   - button
   - tabletop
   - Object
+  - TableTag
   layers:
   - Default
   - TransparentFX

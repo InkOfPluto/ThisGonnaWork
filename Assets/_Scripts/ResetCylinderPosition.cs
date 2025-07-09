@@ -6,6 +6,8 @@ public class ResetCylinderPosition : MonoBehaviour
     private Quaternion initialRotation;
     private Rigidbody rb;
 
+    public GameObject tableObject; // 👉 拖入 Table
+
     void Start()
     {
         rb = GetComponent<Rigidbody>();
@@ -32,6 +34,7 @@ public class ResetCylinderPosition : MonoBehaviour
         {
             ResetPosition();
         }
+
     }
 
     private void OnCollisionEnter(Collision collision)
