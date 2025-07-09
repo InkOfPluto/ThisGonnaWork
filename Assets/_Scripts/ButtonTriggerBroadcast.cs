@@ -1,44 +1,53 @@
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.Events;
+﻿using UnityEngine;
 
 public class ButtonTriggerBroadcast : MonoBehaviour
 {
-    public UnityEvent<float> buttonEvent = new UnityEvent<float>();
-    public AudioSource buttonPress; 
-
     public MeshRenderer buttonMesh;
-    Color origColor;
+    public ResetCylinderPosition[] cylindersToReset;
+
+    private int triggerCount = 0; // 👈 新增计数器
+
+    Color origColor = Color.red;
     Color holdColor = new Color(0.2f, 0.2f, 0, 0.5f);
-    Color pressedColor = new Color(0f, 1f, 0, 1f);
 
     private void Start()
     {
-        origColor = buttonMesh.material.color; 
+        buttonMesh.material.color = origColor;
     }
 
     private void OnTriggerEnter(Collider other)
     {
-        if(other.gameObject.tag == "button")
+        if (other.CompareTag("button"))
         {
-            buttonEvent.Invoke(0.0f);
-            buttonPress.Play(); 
+            triggerCount++;
+            buttonMesh.material.color = holdColor;
+
+            if (cylindersToReset != null && cylindersToReset.Length > 0)
+            {
+                foreach (var cylinder in cylindersToReset)
+                {
+                    if (cylinder != null)
+                        cylinder.ResetPosition();
+                }
+                Debug.Log("[✅] 调用了所有 ResetPosition()");
+            }
+            else
+            {
+                Debug.LogWarning("[❌] cylindersToReset 没有绑定！");
+            }
         }
     }
 
-    private void OnTriggerStay(Collider other)
-    {
-        buttonMesh.material.color = holdColor;
-    }
     private void OnTriggerExit(Collider other)
     {
-        buttonMesh.material.color = pressedColor;        
-        Invoke("ResetButtonState", 1.5f); 
-    }
+        if (other.CompareTag("button"))
+        {
+            triggerCount = Mathf.Max(0, triggerCount - 1); // 👈 防止负数
 
-    void ResetButtonState()
-    {
-        buttonMesh.material.color = origColor;
+            if (triggerCount == 0)
+            {
+                buttonMesh.material.color = origColor;
+            }
+        }
     }
 }

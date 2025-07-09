@@ -217,7 +217,7 @@ class OVREngineConfigurationUpdater
 		}
 		catch
 		{
-			Debug.LogError("Failed to apply Oculus input manager bindings.");
+			//Debug.LogWarning("Failed to apply Oculus input manager bindings.");
 		}
 	}
 

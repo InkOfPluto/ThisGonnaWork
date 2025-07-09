@@ -18,30 +18,6 @@ public class ArticulationPrismDriver : MonoBehaviour
     public Vector3 RotationOffset = new Vector3();
     public Vector3 PositionOffset = new Vector3();
 
-    //void Start()
-    //{
-    //    foreach(ArticulationBody physicsObject in physicsObjects)
-    //    {
-    //        physicsObject.angularDamping = 50f;
-    //    }
-    //}
-
-    //void FixedUpdate()
-    //{
-    //    for (int i = 0; i < driverObjects.Length; i++)
-    //    {
-
-    //        if (physicsObjects[i] == null || driverObjects[i] == null) return;
-
-    //        // 0. Counter gravity 
-    //        physicsObjects[i].AddForce(-Physics.gravity * physicsObjects[i].mass);
-
-    //        // 1. Position Control
-    //        Vector3 positionError = driverObjects[i].position - physicsObjects[i].transform.position;
-    //        physicsObjects[i].AddForce(positionError * positionGain, ForceMode.Force);
-
-    //    }
-    //}
 
 
     void FixedUpdate()
@@ -95,6 +71,32 @@ public class ArticulationPrismDriver : MonoBehaviour
     }
 
 }
+
+//void Start()
+//{
+//    foreach(ArticulationBody physicsObject in physicsObjects)
+//    {
+//        physicsObject.angularDamping = 50f;
+//    }
+//}
+
+//void FixedUpdate()
+//{
+//    for (int i = 0; i < driverObjects.Length; i++)
+//    {
+
+//        if (physicsObjects[i] == null || driverObjects[i] == null) return;
+
+//        // 0. Counter gravity 
+//        physicsObjects[i].AddForce(-Physics.gravity * physicsObjects[i].mass);
+
+//        // 1. Position Control
+//        Vector3 positionError = driverObjects[i].position - physicsObjects[i].transform.position;
+//        physicsObjects[i].AddForce(positionError * positionGain, ForceMode.Force);
+
+//    }
+//}
+
 
 //    void FixedUpdate()
 //    {

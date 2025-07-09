@@ -16,7 +16,7 @@ TagManager:
   - offset
   - button
   - tabletop
-  - dropsound
+  - Object
   layers:
   - Default
   - TransparentFX
