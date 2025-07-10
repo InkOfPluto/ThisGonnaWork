@@ -12,6 +12,8 @@ public class ArticulationHandManualInput : MonoBehaviour
         float input = Input.GetAxis("Fingers");
         PincherController pincherController = hand.GetComponent<PincherController>();
         pincherController.gripState = GripStateForInput(input);
+        Debug.Log("This is the"+input);
+
     }
 
     // INPUT HELPERS

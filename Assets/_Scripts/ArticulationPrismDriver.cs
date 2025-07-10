@@ -62,6 +62,8 @@ public class ArticulationPrismDriver : MonoBehaviour
              Vector3 velocityDifference = desiredVelocity - physicsObjects[i].velocity;
 
             // Apply force based on velocity difference
+            //float zForce = (velocityDifference * physicsObjects[i].mass * velocityGain).magnitude;
+            //Vector3 indentationForce = new Vector3(0f, 0f, zForce);
             physicsObjects[i].AddForce(velocityDifference * physicsObjects[i].mass * velocityGain);
 
             // Apply damping

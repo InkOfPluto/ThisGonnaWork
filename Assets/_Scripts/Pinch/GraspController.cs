@@ -1,54 +1,56 @@
-using System.Collections;
+ï»¿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
 public class GraspController : MonoBehaviour
 {
-    public PincherController pinchController;  // ÒıÓÃ Pincher ¿ØÖÆÆ÷
-    public Transform[] fingerTips;            // ÊÖÖ¸Ö¸¼â¶ÔÏóÊı×é
-    public Transform thumbtip;                // Ä´Ö¸Ö¸¼â¶ÔÏó
-    public float OpenDistance;
-    public float CloseDistance;
+    public Transform[] fingerTips;        // æ‰‹æŒ‡æŒ‡å°–å¯¹è±¡æ•°ç»„
+    public Transform thumbtip;            // æ‹‡æŒ‡æŒ‡å°–å¯¹è±¡
+    public GameObject hand;               // æ‰‹éƒ¨å¯¹è±¡
 
-    void Start()
-    {
-        // ×Ô¶¯²éÕÒ³¡¾°ÖĞµÄ PincherController ½Å±¾
-        pinchController = FindAnyObjectByType<PincherController>();
-    }
+    [Header("æŠ“æ¡è·ç¦»å‚æ•°")]
+    public float minGripDistance = 0.01f; // æ‰‹æŒ‡æœ€é—­åˆæ—¶çš„è·ç¦»
+    public float maxGripDistance = 0.1f; // æ‰‹å®Œå…¨å¼ å¼€æ—¶çš„è·ç¦»
 
     void Update()
     {
         float fingertipDist = 0f;
 
-        // ¼ÆËãËùÓĞÊÖÖ¸Ö¸¼âµ½Ä´Ö¸µÄÆ½¾ù¾àÀë
+        // è®¡ç®—æ‰€æœ‰æ‰‹æŒ‡æŒ‡å°–åˆ°æ‹‡æŒ‡çš„å¹³å‡è·ç¦»
         foreach (Transform t in fingerTips)
         {
             fingertipDist += Vector3.Distance(thumbtip.position, t.position);
         }
+
         float avfingertipDist = fingertipDist / fingerTips.Length;
 
-        // Debug.Log("µ±Ç°Ö¸¼âÆ½¾ù¾àÀë: " + avfingertipDist.ToString("F3"));
+        // å°†å¹³å‡è·ç¦»ä» [min, max] æ˜ å°„åˆ° [-1, 1]ï¼šè¶Šé—­åˆ -> è¶‹è¿‘ -1ï¼Œè¶Šå¼ å¼€ -> è¶‹è¿‘ 1
+        float normalized = Mathf.Clamp01((avfingertipDist - minGripDistance) / (maxGripDistance - minGripDistance));
+        float gripInput = normalized * 2f - 1f; // çº¿æ€§æ˜ å°„åˆ° [-1, 1]
+        Debug.Log("GripInput is " + gripInput);
 
-        // ¸ù¾İ¾àÀëÉèÖÃ×¥ÎÕ×´Ì¬
-        if (avfingertipDist >= OpenDistance)
+        // è®¾ç½® GripState
+        PincherController pincherController = hand.GetComponent<PincherController>();
+        pincherController.gripState = GripStateForInput(gripInput);
+
+        // è°ƒè¯•è¾“å‡º
+        //Debug.Log($"[ğŸ¤] å¹³å‡æŒ‡å°–è·: {avfingertipDist:F4} | input: {gripInput:F4}");
+    }
+
+    // GripState ä¸‰æ€åˆ¤å®š
+    static GripState GripStateForInput(float input)
+    {
+        if (input < 0f)
         {
-            //Debug.Log("ÄãÕÅ¿ªÊÕÊÖÁË");
-            // Èç¹ûÍêÈ«ÕÅ¿ª£ºÊÖÖ¸´ò¿ª
-            pinchController.gripState = GripState.Opening;
-            //Debug.Log("¼Ğ×Ó´ò¿ª");
+            return GripState.Closing;
         }
-        else if (avfingertipDist <= CloseDistance)
+        else if (input > 0f)
         {
-            //Debug.Log("ÄãÊÖÖ¸ºÏÂ£ÁË");
-            // Èç¹ûÍêÈ«±ÕºÏ£ºÊÖÖ¸³ÖĞøºÏÂ£
-            pinchController.gripState = GripState.Closing;
-            //Debug.Log("¼Ğ×Ó¹Ø±Õ");
+            return GripState.Opening;
         }
         else
         {
-         
-            // ÆäËûÇé¿ö£º±£³ÖÊÖÖ¸Î»ÖÃ²»±ä
-            pinchController.gripState = GripState.Fixed;
+            return GripState.Fixed;
         }
     }
 }
