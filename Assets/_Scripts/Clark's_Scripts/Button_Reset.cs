@@ -24,10 +24,18 @@ public class Button_Reset : MonoBehaviour
 
     void Update()
     {
+        // 检测虚拟按钮是否被按下
         if (!_isPressed && GetValue() + threshold >= 1)
             Pressed();
 
         if (_isPressed && GetValue() - threshold <= 0)
+            Released();
+
+        // 👉 检测 Xbox 控制器的 B 键（默认是 "joystick button 1"）
+        if (!_isPressed && Input.GetKeyDown(KeyCode.JoystickButton1))
+            Pressed();
+
+        if (_isPressed && Input.GetKeyUp(KeyCode.JoystickButton1))
             Released();
 
         // 限制按钮移动范围
@@ -35,6 +43,7 @@ public class Button_Reset : MonoBehaviour
         pos.y = Mathf.Clamp(pos.y, -0.01f, 0);
         transform.localPosition = pos;
     }
+
 
     private float GetValue()
     {

@@ -66,7 +66,7 @@ public class UpDown_HandTracking : MonoBehaviour
         }
         else if (Mathf.Abs(diffY) > handSnapThreshold)
         {
-            // 已非常接近目标，但还没完全贴上 —— 直接贴合避免残抖
+            // 已非常接近目标，但还没完全贴上 ―― 直接贴合避免残抖
             handPos.y = targetY;
             hand.transform.position = handPos;
         }

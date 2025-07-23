@@ -5,8 +5,8 @@ using UnityEngine.Events;
 
 public class ButtonForRotateFingers : MonoBehaviour
 {
-    [SerializeField] private float threshold = 0.1f;      // 按钮触发阈值（不改）
-    [SerializeField] private float deadZone = 0.025f;     // 死区（不改）
+    [SerializeField] private float threshold = 0.1f;
+    [SerializeField] private float deadZone = 0.025f;
 
     private bool _isPressed;
     private Vector3 _startPos;
@@ -14,29 +14,47 @@ public class ButtonForRotateFingers : MonoBehaviour
 
     public UnityEvent onPressed, onReleased;
 
-    private bool isInRotateMode = false;
-
     [SerializeField] private MonoBehaviour Grasp_HandTracking;
     [SerializeField] private MonoBehaviour UpDown_HandTracking;
     [SerializeField] private MonoBehaviour Follow_HandTracking;
 
+    [SerializeField] private Transform cubeCenter;
     [SerializeField] private List<Transform> fingerCubes;
+
+    private Dictionary<Transform, float> lockedYPositions = new Dictionary<Transform, float>();
+
+    private enum ControlState { Default, Rotate, Grasp }
+    private ControlState currentState = ControlState.Default;
 
     void Start()
     {
         _startPos = transform.localPosition;
         _joint = GetComponent<ConfigurableJoint>();
 
-        isInRotateMode = false;
-        SwitchToNormalMode();  // 默认进入正常模式
+        currentState = ControlState.Default;
+        Debug.Log("[状态] 初始为默认模式");
     }
 
     void Update()
     {
+        // 实时记录 fingerCubes 的 Y 值（仅在默认或抓取模式）
+        if (currentState != ControlState.Rotate)
+        {
+            foreach (var cube in fingerCubes)
+            {
+                if (cube == null) continue;
+                lockedYPositions[cube] = cube.position.y;
+            }
+        }
+
+        // 按钮触发逻辑
         if (!_isPressed && GetValue() + threshold >= 1)
             Pressed();
-
         if (_isPressed && GetValue() - threshold <= 0)
+            Released();
+        if (!_isPressed && Input.GetKeyDown(KeyCode.JoystickButton0))
+            Pressed();
+        if (_isPressed && Input.GetKeyUp(KeyCode.JoystickButton0))
             Released();
 
         // 限制按钮 Y 向移动范围
@@ -57,71 +75,78 @@ public class ButtonForRotateFingers : MonoBehaviour
     {
         _isPressed = true;
         onPressed.Invoke();
-        //Debug.Log("Pressed");
 
-        if (!isInRotateMode)
+        if (currentState == ControlState.Default)
         {
             SwitchToRotateMode();
+            currentState = ControlState.Rotate;
+            Debug.Log("[状态] 默认模式 → 旋转模式");
         }
-        else
+        else if (currentState == ControlState.Rotate)
         {
-            SwitchToNormalMode(); 
+            SwitchToGraspMode();
+            currentState = ControlState.Grasp;
+            Debug.Log("[状态] 旋转模式 → 抓取模式");
         }
-
-        isInRotateMode = !isInRotateMode;
+        else if (currentState == ControlState.Grasp)
+        {
+            SwitchToRotateMode();
+            currentState = ControlState.Rotate;
+            Debug.Log("[状态] 抓取模式 → 旋转模式");
+        }
     }
 
     private void Released()
     {
         _isPressed = false;
         onReleased.Invoke();
-        //Debug.Log("Released");
     }
 
     private void SwitchToRotateMode()
     {
         if (Grasp_HandTracking != null) Grasp_HandTracking.enabled = false;
         if (UpDown_HandTracking != null) UpDown_HandTracking.enabled = false;
-        if (Follow_HandTracking != null) Follow_HandTracking.enabled = true;
+        if (Follow_HandTracking != null)
+        {
+            Follow_HandTracking.enabled = true;
 
-        // 禁用所有 fingerCube 上的 PincherFingerController
+            var follow = Follow_HandTracking as Follow_HandTracking;
+            if (follow != null)
+            {
+                follow.lockedYPositions = new Dictionary<Transform, float>(lockedYPositions);
+            }
+        }
+
         foreach (var cube in fingerCubes)
         {
+            if (cube == null) continue;
+
             var pincher = cube.GetComponent<PincherFingerController>();
             if (pincher != null)
             {
                 pincher.enabled = false;
             }
+
+            Vector3 newPos = cube.position;
+            if (lockedYPositions.ContainsKey(cube))
+                newPos.y = lockedYPositions[cube];
+            cube.position = newPos;
         }
-
-        //Debug.Log("Switched to Rotate Mode");
     }
 
-    private void SwitchToNormalMode()
+    private void SwitchToGraspMode()
     {
-        StartCoroutine(SafeTransitionToNormalMode()); // 使用协程安全转换
-    }
+        if (Grasp_HandTracking != null) Grasp_HandTracking.enabled = true;
+        if (UpDown_HandTracking != null) UpDown_HandTracking.enabled = true;
+        if (Follow_HandTracking != null) Follow_HandTracking.enabled = false;
 
-    private IEnumerator SafeTransitionToNormalMode()
-    {
-        yield return new WaitForEndOfFrame();  // 等待 Follow_HandTracking 的 Update 执行完
-
-        // ✅ Step 1: 记录当前 Cube 位置为 openPosition
         foreach (var cube in fingerCubes)
         {
             var pincher = cube.GetComponent<PincherFingerController>();
             if (pincher != null)
             {
-                pincher.enabled = true; // 确保重新启用控制器
-                pincher.InitializeOpenPositionFromCurrent();
+                pincher.enabled = true;
             }
         }
-
-        // ✅ Step 2: 启用抓握控制，关闭 Follow
-        if (Grasp_HandTracking != null) Grasp_HandTracking.enabled = true;
-        if (UpDown_HandTracking != null) UpDown_HandTracking.enabled = true;
-        if (Follow_HandTracking != null) Follow_HandTracking.enabled = false;
-
-        //Debug.Log("Switched to Normal Mode (safe)");
     }
 }

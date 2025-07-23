@@ -18,6 +18,7 @@ TagManager:
   - tabletop
   - Object
   - TableTag
+  - Threshold
   layers:
   - Default
   - TransparentFX
@@ -26,9 +27,9 @@ TagManager:
   - Water
   - UI
   - NoSelfCollide
-  - 
-  - 
-  - 
+  - LeftHand
+  - Interactive
+  - Cube
   - 
   - 
   - 

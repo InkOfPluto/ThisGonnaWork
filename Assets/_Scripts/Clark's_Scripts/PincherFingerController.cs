@@ -4,17 +4,20 @@ using UnityEngine;
 
 public class PincherFingerController : MonoBehaviour
 {
+
     public float closedZ;
+
     Vector3 openPosition;
     ArticulationBody articulation;
 
-    private bool hasInitialized = false; // ✅ 防止多次初始化
 
     // INIT
+
     void Start()
     {
+        openPosition = transform.localPosition;
         articulation = GetComponent<ArticulationBody>();
-        // 不在这里设置 openPosition，让 Button 控制设置
+        SetLimits();
     }
 
     void SetLimits()
@@ -30,17 +33,9 @@ public class PincherFingerController : MonoBehaviour
         articulation.zDrive = drive;
     }
 
-    // ✅ 新增：仅在首次调用时初始化 openPosition
-    public void InitializeOpenPositionFromCurrent()
-    {
-        if (hasInitialized) return;
-        openPosition = transform.localPosition;
-        SetLimits(); // 重新设置上下限
-        hasInitialized = true;
-        Debug.Log($"{name} openPosition initialized to {openPosition}");
-    }
 
     // READ
+
     public float CurrentGrip()
     {
         float grip = Mathf.InverseLerp(openPosition.z, closedZ, transform.localPosition.z);
@@ -53,6 +48,7 @@ public class PincherFingerController : MonoBehaviour
     }
 
     // CONTROL
+
     public void UpdateGrip(float grip)
     {
         float targetZ = ZDriveTarget(grip);
@@ -68,10 +64,13 @@ public class PincherFingerController : MonoBehaviour
     }
 
     // HELPERS
+
     float ZDriveTarget(float grip)
     {
         float zPosition = Mathf.Lerp(openPosition.z, closedZ, grip);
         float targetZ = (zPosition - openPosition.z) * transform.parent.localScale.z;
         return targetZ;
     }
+
+
 }
