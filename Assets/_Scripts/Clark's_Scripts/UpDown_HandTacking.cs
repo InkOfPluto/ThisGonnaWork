@@ -60,8 +60,13 @@ public class UpDown_HandTracking : MonoBehaviour
 
         if (Mathf.Abs(diffY) > handDeadZone)
         {
+            // Add a handPos.y spring filter function (simple) 
+
+
             // ²åÖµÒÆ¶¯
-            handPos.y = Mathf.MoveTowards(handPos.y, targetY, handMoveSpeed * Time.deltaTime);
+            //float handPosY = Mathf.MoveTowards(handPos.y, targetY, handMoveSpeed * Time.deltaTime);
+            handPos.y = Mathf.Lerp(handPos.y, targetY, handMoveSpeed * Time.deltaTime);
+
             hand.transform.position = handPos;
         }
         else if (Mathf.Abs(diffY) > handSnapThreshold)

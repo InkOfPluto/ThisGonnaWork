@@ -1,14 +1,12 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
+using UnityEngine;
 using System.IO.Ports;
 using Unity.VisualScripting;
-using UnityEditor.Experimental.Rendering;
-using UnityEngine;
 
 public class SlipSequence : MonoBehaviour
 {
-    public string Comport1, Comport2; 
+    public string Comport1, Comport2;
     private SerialPort serial1;
     private SerialPort serial2;
 
@@ -17,7 +15,7 @@ public class SlipSequence : MonoBehaviour
     public ArticulationBody tmb, index, mid, ring;
     public float graspDepth = 30f;
 
-    //public float targetGrasperHeight = 19;
+    public float targetGrasperHeight = 19;
 
     float tmbCloseState = 0.05f;
     float indexCloseState = -0.05f;
@@ -47,8 +45,9 @@ public class SlipSequence : MonoBehaviour
             serial1.Open();
             serial2.Open();
         }
-        catch (Exception e) { print(e); }
+        catch { print("Something went wrong!"); }
     }
+
     void Update()
     {
         //Debug.Log("Velocity: " + targetCube.GetComponent<Rigidbody>().velocity);
@@ -105,6 +104,7 @@ public class SlipSequence : MonoBehaviour
     {
         return 0.5f;
     }
+
 
     // Special loop (Coroutine) where we can control the sequence of events in a more controlled fashion
     private IEnumerator GraspHolderSequence()
@@ -178,16 +178,16 @@ public class SlipSequence : MonoBehaviour
         // Set a small pause here to give the fingers a bit of time to close
         yield return new WaitForSeconds(1f);
 
-        //// 2. want shoulder link to lift up to a given target height (targetgrasperheight)
-        //drive_shoulder = shoulderlink.xdrive; // assuming rotation around x-axis
-        //drive_shoulder.target = targetgrasperheight;
-        //shoulderlink.xdrive = drive_shoulder;
+        //// 2. Want shoulder link to lift up to a given target height (targetGrasperHeight)
+        //drive_shoulder = shoulderLink.xDrive; // Assuming rotation around x-axis
+        //drive_shoulder.target = targetGrasperHeight;
+        //shoulderLink.xDrive = drive_shoulder;
 
-        //// set a small pause here to give the arm a bit of time to lift up 
-        //yield return new waitforseconds(1f);
+        // Set a small pause here to give the arm a bit of time to lift up 
+        yield return new WaitForSeconds(1f);
 
-        // 3. once at the target height, then slowly increase the attached weight to the target object 
-        Debug.Log("start increasing the object's offset mass!");
+        // 3. Once at the target height, then slowly increase the attached weight to the target object 
+        Debug.Log("Start increasing the object's offset mass!");
 
 
         while (offsetMass.GetComponent<Rigidbody>().mass < targetOffsetMass)
@@ -200,72 +200,36 @@ public class SlipSequence : MonoBehaviour
                 {
                     serial1.WriteLine("fgfgbnbn");
                     serial2.WriteLine("fgfgbnbn");
-                    Debug.Log("slipping!");
+                    Debug.Log("Slipping!");
                     break;
                 }
-                catch { print("something went wrong!"); }
+                catch { print("Something went wrong!"); }
             }
 
             yield return null;
         }
 
-        Debug.Log("slip ended!");
+        Debug.Log("Slip ended!");
 
 
         yield return null;
 
     }
-    //mapping function from vr hand to robot hand
-    public static float mapIndex(float value, float leftmin, float leftmax, float rightmin, float rightmax)
+    //MAPPING FUNCTION FROM VR HAND TO ROBOT HAND
+    public static float mapIndex(float value, float leftMin, float leftMax, float rightMin, float rightMax)
     {
-        return rightmin + (value - leftmin) * (rightmax - rightmin) / (leftmax - leftmin);
+        return rightMin + (value - leftMin) * (rightMax - rightMin) / (leftMax - leftMin);
     }
-    public static float mapMiddle(float value, float leftmin, float leftmax, float rightmin, float rightmax)
+    public static float mapMiddle(float value, float leftMin, float leftMax, float rightMin, float rightMax)
     {
-        return rightmin + (value - leftmin) * (rightmax - rightmin) / (leftmax - leftmin);
+        return rightMin + (value - leftMin) * (rightMax - rightMin) / (leftMax - leftMin);
     }
-    public static float mapRing(float value, float leftmin, float leftmax, float rightmin, float rightmax)
+    public static float mapRing(float value, float leftMin, float leftMax, float rightMin, float rightMax)
     {
-        return rightmin + (value - leftmin) * (rightmax - rightmin) / (leftmax - leftmin);
+        return rightMin + (value - leftMin) * (rightMax - rightMin) / (leftMax - leftMin);
     }
-    public static float mapThumb(float value, float leftmin, float leftmax, float rightmin, float rightmax)
+    public static float mapThumb(float value, float leftMin, float leftMax, float rightMin, float rightMax)
     {
-        return rightmin + (value - leftmin) * (rightmax - rightmin) / (leftmax - leftmin);
+        return rightMin + (value - leftMin) * (rightMax - rightMin) / (leftMax - leftMin);
     }
-
-    //private void Update()
-    //{
-    //    if (Input.GetKeyUp(KeyCode.Z))
-    //    {
-    //        serial1.WriteLine("fffffffffffffffffffffff");
-    //    }
-    //    if (Input.GetKeyUp(KeyCode.X))
-    //    {
-    //        serial1.WriteLine("bbbbbbbbbbbbbbbbbbbbb");
-    //    }
-    //    if (Input.GetKeyUp(KeyCode.C))
-    //    {
-    //        serial1.WriteLine("gggggggggggggggggggggg");    //Serail1 Ring g clock down 相对于手指向下滑（右边看 顺时针）
-    //    }
-    //    if (Input.GetKeyUp(KeyCode.V))
-    //    {
-    //        serial1.WriteLine("nnnnnnnnnnnnnnnnnnnnnnn");   //Serial1 Ring n COUNTERCLOCK UP 相对于手指向上滑（右边看 逆时针）
-    //    }
-    //    if (Input.GetKeyUp(KeyCode.B))
-    //    {
-    //        serial2.WriteLine("ffffffffffffffffffff");    //Serail2 Index f clock down 相对于手指向下滑（右边看 顺时针）
-    //    }
-    //    if (Input.GetKeyUp(KeyCode.N))
-    //    {
-    //        serial2.WriteLine("bbbbbbbbbbbbbbbbbbbbb");
-    //    }
-    //    if (Input.GetKeyUp(KeyCode.D))
-    //    {
-    //        serial2.WriteLine("gggggggggggggggggggggg");    //Serial2 Mid g COUNTERCLOCK UP 相对于手指向上滑（右边看 逆时针）
-    //    }
-    //    if (Input.GetKeyUp(KeyCode.F))
-    //    {
-    //        serial2.WriteLine("nnnnnnnnnnnnnnnnnnnnnnn");   //Serail2 Mid n clock down 相对于手指向下滑（右边看 顺时针）
-    //    }
-    //}
 }

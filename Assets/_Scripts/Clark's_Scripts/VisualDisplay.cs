@@ -27,7 +27,7 @@ public class VisualDisplay : MonoBehaviour
     private float fixedRadius = 0.015f;
 
     [Header("Visual Display Point Radius | 点的可视化小球半径")]
-    public float gizmoSphereRadius = 0.001f; 
+    public float gizmoSphereRadius = 0.001f;
 
     [Header("Value Of Slipping DistanceY | Y方向滑动数值")]
     public float DistanceDA;
@@ -36,16 +36,32 @@ public class VisualDisplay : MonoBehaviour
     public float DistanceWU;
     public float DistanceXIAO;
 
+    [Header("Gizmos Display Settings | Gizmos显示设置")]
+    public bool showCenterPoint = true;
+    public bool showCubePoints = true;
+    public bool showProjectedPoints = true;
+    public bool showConnectingLines = true;
+    public bool showYProjectionLines = true;
+    public bool showCircleRing = true;
+
+    [Header("Gizmos Colors | Gizmo颜色设置")]
+    public Color centerPointColor = Color.red;
+    public Color cubePointColor = Color.green;
+    public Color projectedPointColor = Color.cyan;
+    public Color connectingLineColor = Color.cyan;
+    public Color yProjectionLineColor = Color.red;
+    public Color ringColor = Color.magenta;
 
     void Update()
     {
         if (cubeCenter == null || cylinder == null || fingers.Length < 5)
             return;
 
-        Vector3 cylinderY = cylinder.up;
-        Vector3 vecToCylinder = cylinder.position - cubeCenter.position;
-        float t = Vector3.Dot(vecToCylinder, cylinderY);
-        localYCenterWorld = cylinder.position - cylinderY * t;
+        float cubeY = cubeCenter.position.y;
+        Vector3 localYAxis = cylinder.up;
+        float deltaY = cubeY - cylinder.position.y;
+        localYCenterWorld = cylinder.position + localYAxis * deltaY;
+
         Vector3 localYCenter = cylinder.InverseTransformPoint(localYCenterWorld);
 
         for (int i = 0; i < 5; i++)
@@ -67,6 +83,36 @@ public class VisualDisplay : MonoBehaviour
                 case 3: ObjectPoint_WU = projectedWorld; break;
                 case 4: ObjectPoint_XIAO = projectedWorld; break;
             }
+
+            Transform cubePoint = GetCubePointByIndex(i);
+            if (cubePoint != null)
+            {
+                float slipDeltaY = projectedWorld.y - cubePoint.position.y;
+                if (Mathf.Abs(slipDeltaY) < 0.001f) slipDeltaY = 0f;
+                slipDeltaY = Mathf.Round(slipDeltaY * 1000f) / 1000f;
+
+                switch (i)
+                {
+                    case 0: DistanceDA = slipDeltaY; break;
+                    case 1: DistanceSHI = slipDeltaY; break;
+                    case 2: DistanceZHONG = slipDeltaY; break;
+                    case 3: DistanceWU = slipDeltaY; break;
+                    case 4: DistanceXIAO = slipDeltaY; break;
+                }
+            }
+        }
+    }
+
+    private Transform GetCubePointByIndex(int i)
+    {
+        switch (i)
+        {
+            case 0: return CubePoint_DA;
+            case 1: return CubePoint_SHI;
+            case 2: return CubePoint_ZHONG;
+            case 3: return CubePoint_WU;
+            case 4: return CubePoint_XIAO;
+            default: return null;
         }
     }
 
@@ -78,72 +124,67 @@ public class VisualDisplay : MonoBehaviour
         Vector3[] points = { ObjectPoint_DA, ObjectPoint_SHI, ObjectPoint_ZHONG, ObjectPoint_WU, ObjectPoint_XIAO };
         Transform[] cubePoints = { CubePoint_DA, CubePoint_SHI, CubePoint_ZHONG, CubePoint_WU, CubePoint_XIAO };
 
-        // 🟡 圆心小球
-        Gizmos.color = Color.yellow;
-        Gizmos.DrawSphere(localYCenterWorld, gizmoSphereRadius);
-
-        // 🟢 显示五个 CubePoint 小球
-        Gizmos.color = Color.green;
-        for (int i = 0; i < cubePoints.Length; i++)
+        if (showCenterPoint)
         {
-            if (cubePoints[i] != null)
-                Gizmos.DrawSphere(cubePoints[i].position, gizmoSphereRadius);
+            Gizmos.color = centerPointColor;
+            Gizmos.DrawSphere(localYCenterWorld, gizmoSphereRadius);
+        }
+
+        if (showCubePoints)
+        {
+            Gizmos.color = cubePointColor;
+            for (int i = 0; i < cubePoints.Length; i++)
+            {
+                if (cubePoints[i] != null)
+                    Gizmos.DrawSphere(cubePoints[i].position, gizmoSphereRadius);
+            }
         }
 
         for (int i = 0; i < points.Length; i++)
         {
-            // 🔵 投影点小球
-            Gizmos.color = Color.cyan;
-            Gizmos.DrawSphere(points[i], gizmoSphereRadius);
+            if (cubePoints[i] == null) continue;
 
-            if (cubePoints[i] != null)
+            Vector3 start = cubePoints[i].position;
+            Vector3 end = points[i];
+
+            if (showProjectedPoints)
             {
-                Vector3 start = cubePoints[i].position;
-                Vector3 end = points[i];
-
-                Gizmos.color = Color.green;
-                Gizmos.DrawSphere(start, gizmoSphereRadius);
-
-                Gizmos.color = Color.cyan;
-                Gizmos.DrawLine(start, end);
-
-                // 🔴 红色线段：Y轴投影
-                Vector3 yProjectionStart = new Vector3(start.x, end.y, start.z);
-                Gizmos.color = Color.red;
-                Gizmos.DrawLine(start, yProjectionStart);
-
-                // ✅ 计算带方向的 Y 轴差值
-                float deltaY = end.y - start.y;
-
-                // ✅ 存入对应变量
-                switch (i)
-                {
-                    case 0: DistanceDA = deltaY; break;
-                    case 1: DistanceSHI = deltaY; break;
-                    case 2: DistanceZHONG = deltaY; break;
-                    case 3: DistanceWU = deltaY; break;
-                    case 4: DistanceXIAO = deltaY; break;
-                }
+                Gizmos.color = projectedPointColor;
+                Gizmos.DrawSphere(end, gizmoSphereRadius);
             }
 
+            if (showConnectingLines)
+            {
+                Gizmos.color = connectingLineColor;
+                Gizmos.DrawLine(start, end);
+            }
+
+            if (showYProjectionLines)
+            {
+                Vector3 yProjectionStart = new Vector3(start.x, end.y, start.z);
+                Gizmos.color = yProjectionLineColor;
+                Gizmos.DrawLine(start, yProjectionStart);
+            }
         }
 
-        // 🟣 画出圆柱上的圆
-        Gizmos.color = Color.magenta;
-        int segments = 60;
-        Vector3 localYCenter = cylinder.InverseTransformPoint(localYCenterWorld);
-
-        for (int i = 0; i < segments; i++)
+        if (showCircleRing)
         {
-            float angle1 = Mathf.Deg2Rad * (360f * i / segments);
-            float angle2 = Mathf.Deg2Rad * (360f * (i + 1) / segments);
+            Gizmos.color = ringColor;
+            int segments = 60;
+            Vector3 localYCenter = cylinder.InverseTransformPoint(localYCenterWorld);
 
-            Vector3 local1 = new Vector3(Mathf.Cos(angle1) * fixedRadius, 0, Mathf.Sin(angle1) * fixedRadius);
-            Vector3 local2 = new Vector3(Mathf.Cos(angle2) * fixedRadius, 0, Mathf.Sin(angle2) * fixedRadius);
+            for (int i = 0; i < segments; i++)
+            {
+                float angle1 = Mathf.Deg2Rad * (360f * i / segments);
+                float angle2 = Mathf.Deg2Rad * (360f * (i + 1) / segments);
 
-            Vector3 world1 = cylinder.TransformPoint(localYCenter + local1);
-            Vector3 world2 = cylinder.TransformPoint(localYCenter + local2);
-            Gizmos.DrawLine(world1, world2);
+                Vector3 local1 = new Vector3(Mathf.Cos(angle1) * fixedRadius, 0, Mathf.Sin(angle1) * fixedRadius);
+                Vector3 local2 = new Vector3(Mathf.Cos(angle2) * fixedRadius, 0, Mathf.Sin(angle2) * fixedRadius);
+
+                Vector3 world1 = cylinder.TransformPoint(localYCenter + local1);
+                Vector3 world2 = cylinder.TransformPoint(localYCenter + local2);
+                Gizmos.DrawLine(world1, world2);
+            }
         }
     }
 }

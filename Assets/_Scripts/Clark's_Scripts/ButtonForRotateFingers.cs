@@ -52,9 +52,9 @@ public class ButtonForRotateFingers : MonoBehaviour
             Pressed();
         if (_isPressed && GetValue() - threshold <= 0)
             Released();
-        if (!_isPressed && Input.GetKeyDown(KeyCode.JoystickButton0))
+        if (!_isPressed && Input.GetKeyDown(KeyCode.JoystickButton0) || Input.GetKeyDown(KeyCode.E))
             Pressed();
-        if (_isPressed && Input.GetKeyUp(KeyCode.JoystickButton0))
+        if (_isPressed && Input.GetKeyUp(KeyCode.JoystickButton0) || Input.GetKeyDown(KeyCode.E))
             Released();
 
         // 限制按钮 Y 向移动范围

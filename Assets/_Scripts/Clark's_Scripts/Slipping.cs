@@ -5,37 +5,39 @@ using UnityEngine;
 
 public class Slipping : MonoBehaviour
 {
-    [Header("Ports | 端口")]
+    [Header("Ports | 串口设置")]
     public string Comport1 = "COM5";
     public string Comport2 = "COM6";
-
     private SerialPort serial1;
     private SerialPort serial2;
 
-    [Header("Game Objects | 游戏物体")]
-    public GameObject cylinder;
+    [Header("依赖组件 | 自动获取")]
+    [SerializeField] private PincherController pincherController;
+    [SerializeField] private VisualDisplay visualDisplay;
 
-    [Header("Finger Cubes | 手指方块")]
-    public ArticulationBody CubeDA, CubeSHI, CubeZHONG, CubeWU, CubeXIAO;
+    [Header("调试参数")]
+    public float slipThreshold = 0.001f;   // 滑动阈值
+    public float amplify = 100f;           // 放大滑动速度
+    public float cooldownTime = 0.2f;      // 每个手指串口冷却时间
 
-    private PincherController pincherController;
     private Coroutine slipMonitorRoutine;
-
-    private Vector3 lastCylinderPos;
-    private Vector3 thumbLastPos, indexLastPos, middleLastPos, ringLastPos, pinkyLastPos;
-
-    [Header("Mass Center | 质心")]
-    public float DeltaMass = 5f;
-
-    // 预设的中心位置
-    public Vector3 centerB = new Vector3(0.03f, 0, 0.02f);
-    private Vector3 centerN = Vector3.zero;
-    public Vector3 centerM = new Vector3(-0.01f, -0.02f, 0);
+    private float[] lastSendTime = new float[5];  // [DA, SHI, ZHONG, WU, XIAO]
 
     private void Start()
     {
-        pincherController = GetComponent<PincherController>();
 
+        // 自动查找组件
+        if (pincherController == null)
+            pincherController = GetComponent<PincherController>();
+        if (visualDisplay == null)
+            visualDisplay = GetComponent<VisualDisplay>();
+
+        if (pincherController == null)
+            Debug.LogError("❌ 未找到 PincherController！");
+        if (visualDisplay == null)
+            Debug.LogError("❌ 未找到 VisualDisplay！");
+
+        // 打开串口
         try
         {
             serial1 = new SerialPort(Comport1, 115200);
@@ -47,67 +49,25 @@ public class Slipping : MonoBehaviour
         {
             Debug.LogWarning("串口连接失败: " + e.Message);
         }
-
-        lastCylinderPos = cylinder.transform.position;
     }
 
     private void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Z))
+        if (Input.GetKeyDown(KeyCode.Q))
         {
             if (slipMonitorRoutine != null)
                 StopCoroutine(slipMonitorRoutine);
-
             slipMonitorRoutine = StartCoroutine(SlipMonitorRoutine());
         }
 
-        if (Input.GetKeyDown(KeyCode.X))
+        if (Input.GetKeyDown(KeyCode.A))
         {
             if (slipMonitorRoutine != null)
+            {
                 StopCoroutine(slipMonitorRoutine);
-            Debug.Log("滑动监测关闭 ×");
+                Debug.Log("滑动监测关闭 ×");
+            }
         }
-
-        // 按 C 减少质量
-        if (Input.GetKeyDown(KeyCode.C))
-        {
-            Rigidbody rb = cylinder.GetComponent<Rigidbody>();
-            rb.mass = Mathf.Max(0.1f, rb.mass - DeltaMass);
-            Debug.Log($"减少质量，当前质量: {rb.mass}");
-        }
-
-        // 按 V 增加质量
-        if (Input.GetKeyDown(KeyCode.V))
-        {
-            Rigidbody rb = cylinder.GetComponent<Rigidbody>();
-            rb.mass += DeltaMass;
-            Debug.Log($"增加质量，当前质量: {rb.mass}");
-        }
-
-        // 设定质心
-        if (Input.GetKeyDown(KeyCode.B))
-        {
-            SetCenterOfMass(centerB);
-            Debug.Log("质心设置为 B 预设");
-        }
-
-        if (Input.GetKeyDown(KeyCode.N))
-        {
-            SetCenterOfMass(centerN);
-            Debug.Log("质心设置为 N 默认中心");
-        }
-
-        if (Input.GetKeyDown(KeyCode.M))
-        {
-            SetCenterOfMass(centerM);
-            Debug.Log("质心设置为 M 预设");
-        }
-    }
-
-    private void SetCenterOfMass(Vector3 center)
-    {
-        Rigidbody rb = cylinder.GetComponent<Rigidbody>();
-        rb.centerOfMass = center;
     }
 
     private IEnumerator SlipMonitorRoutine()
@@ -116,61 +76,66 @@ public class Slipping : MonoBehaviour
 
         while (true)
         {
-            if (pincherController != null && pincherController.gripState == GripState.Closing)
+            if (pincherController != null && pincherController.gripState != GripState.Opening)
+
             {
-                Vector3 currentCylinderPos = cylinder.transform.position;
+                float t = Time.time;
 
-                Vector3 thumbPos = CubeDA.transform.position;
-                Vector3 indexPos = CubeSHI.transform.position;
-                Vector3 middlePos = CubeZHONG.transform.position;
-                Vector3 ringPos = CubeWU.transform.position;
-                Vector3 pinkyPos = CubeXIAO.transform.position;
+                // ✨ 注意：DistanceXXX 本身就是高度差，乘以放大倍率就代表滑动速度
+                float speedDA = visualDisplay.DistanceDA * amplify;
+                float speedSHI = visualDisplay.DistanceSHI * amplify;
+                float speedZHONG = visualDisplay.DistanceZHONG * amplify;
+                float speedWU = visualDisplay.DistanceWU * amplify;
+                float speedXIAO = visualDisplay.DistanceXIAO * amplify;
 
-                float thumbVelY = (currentCylinderPos.y - thumbPos.y) - (lastCylinderPos.y - thumbLastPos.y);
-                float indexVelY = (currentCylinderPos.y - indexPos.y) - (lastCylinderPos.y - indexLastPos.y);
-                float middleVelY = (currentCylinderPos.y - middlePos.y) - (lastCylinderPos.y - middleLastPos.y);
-                float ringVelY = (currentCylinderPos.y - ringPos.y) - (lastCylinderPos.y - ringLastPos.y);
-                float pinkyVelY = (currentCylinderPos.y - pinkyPos.y) - (lastCylinderPos.y - pinkyLastPos.y);
+                Debug.Log($"[🧪滑动速度] DA:{speedDA:F3} | SHI:{speedSHI:F3} | ZHONG:{speedZHONG:F3} | WU:{speedWU:F3} | XIAO:{speedXIAO:F3}");
 
-                DetectAndSend(thumbVelY, serial1, "ffffff", "bbbbbb", "拇指");
-                DetectAndSend(indexVelY, serial2, "ffffff", "bbbbbb", "食指");
-                DetectAndSend(middleVelY, serial2, "gggggg", "nnnnnn", "中指");
-                DetectAndSend(ringVelY, serial1, "gggggg", "nnnnnn", "无名指");
-                // DetectAndSend(pinkyVelY, serial3, "gggggg", "nnnnnn", "小拇指");
+                // === 串口控制逻辑 ===
 
-                lastCylinderPos = currentCylinderPos;
-                thumbLastPos = thumbPos;
-                indexLastPos = indexPos;
-                middleLastPos = middlePos;
-                ringLastPos = ringPos;
-                pinkyLastPos = pinkyPos;
+                // 大拇指（COM5）
+                if (Mathf.Abs(speedDA) > slipThreshold && t - lastSendTime[0] > cooldownTime)
+                {
+                    if (serial1?.IsOpen ?? false)
+                        serial1.WriteLine(speedDA > 0 ? "fffff" : "bbbbb");
+                    lastSendTime[0] = t;
+                }
+
+                // 食指（COM6）
+                if (Mathf.Abs(speedSHI) > slipThreshold && t - lastSendTime[1] > cooldownTime)
+                {
+                    if (serial2?.IsOpen ?? false)
+                        serial2.WriteLine(speedSHI > 0 ? "fffff" : "bbbbb");
+                    lastSendTime[1] = t;
+                }
+
+                // 中指（COM6）
+                if (Mathf.Abs(speedZHONG) > slipThreshold && t - lastSendTime[2] > cooldownTime)
+                {
+                    if (serial2?.IsOpen ?? false)
+                        serial2.WriteLine(speedZHONG > 0 ? "ggggg" : "nnnnn");
+                    lastSendTime[2] = t;
+                }
+
+                // 无名指（COM5）
+                if (Mathf.Abs(speedWU) > slipThreshold && t - lastSendTime[3] > cooldownTime)
+                {
+                    if (serial1?.IsOpen ?? false)
+                        serial1.WriteLine(speedWU > 0 ? "ggggg" : "nnnnn");
+                    lastSendTime[3] = t;
+                }
+
+                // 小拇指（可注释）
+                /*
+                if (Mathf.Abs(speedXIAO) > slipThreshold && t - lastSendTime[4] > cooldownTime)
+                {
+                    if (serial1?.IsOpen ?? false)
+                        serial1.WriteLine(speedXIAO > 0 ? "xxxxx" : "yyyyy");
+                    lastSendTime[4] = t;
+                }
+                */
             }
 
-            yield return new WaitForSeconds(0.1f);
-        }
-    }
-
-    private void DetectAndSend(float relativeVelY, SerialPort serial, string downMsg, string upMsg, string fingerName)
-    {
-        float threshold = 0.01f;
-
-        if (relativeVelY > threshold)
-        {
-            try
-            {
-                serial.WriteLine(downMsg);
-                Debug.Log($"{fingerName} 向下滑动，发送：{downMsg}");
-            }
-            catch { Debug.LogWarning("串口写入失败"); }
-        }
-        else if (relativeVelY < -threshold)
-        {
-            try
-            {
-                serial.WriteLine(upMsg);
-                Debug.Log($"{fingerName} 向上滑动，发送：{upMsg}");
-            }
-            catch { Debug.LogWarning("串口写入失败"); }
+            yield return new WaitForFixedUpdate();
         }
     }
 }
