@@ -1,53 +1,127 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 
+[ExecuteAlways]
 public class CenterOfMassController : MonoBehaviour
 {
-    [Header("Ö¸¶¨Ä¿±êÎïÌå£¨±ØĞë´ø Rigidbody£©")]
+    [Header("ç›®æ ‡ç‰©ä½“ï¼ˆå¿…é¡»å¸¦ Rigidbody + MeshRendererï¼‰")]
     public GameObject targetObject;
 
-    private Rigidbody rb;
+    [Header("é€‰æ‹©è¦åº”ç”¨çš„é‡å¿ƒç¼–å·ï¼ˆ0 ~ 14ï¼‰")]
+    [Range(0, 14)]
+    public int selectedCOMIndex = 0;
 
-    private Vector3[] centerOfMassList = new Vector3[]
+    [Header("é‡å¿ƒåæ ‡åˆ—è¡¨ï¼ˆé»˜è®¤15ä¸ªï¼Œå¯åœ¨ Inspector ä¿®æ”¹ï¼‰")]
+    public Vector3[] centerOfMassList = new Vector3[]
     {
-        new Vector3( 0.000f,  0.000f,  0.000f), // 1
-        new Vector3( 0.081f,  0.047f, -0.039f), // 2
-        new Vector3(-0.093f, -0.019f,  0.088f), // 3
-        new Vector3( 0.014f,  0.097f, -0.074f), // 4
-        new Vector3(-0.078f,  0.065f,  0.022f), // 5
-        new Vector3( 0.058f, -0.091f, -0.067f), // 6
-        new Vector3(-0.006f,  0.030f,  0.096f), // 7
-        new Vector3( 0.087f, -0.058f,  0.079f), // 8
-        new Vector3(-0.091f, -0.031f, -0.092f), // 9
-        new Vector3( 0.025f,  0.098f, -0.005f)  // 0
+        new Vector3( 0.000f,  0.000f,  0.000f),
+        new Vector3( 0.081f,  0.047f, -0.039f),
+        new Vector3(-0.093f, -0.019f,  0.088f),
+        new Vector3( 0.014f,  0.097f, -0.074f),
+        new Vector3(-0.078f,  0.065f,  0.022f),
+        new Vector3( 0.058f, -0.091f, -0.067f),
+        new Vector3(-0.006f,  0.030f,  0.096f),
+        new Vector3( 0.087f, -0.058f,  0.079f),
+        new Vector3(-0.091f, -0.031f, -0.092f),
+        new Vector3( 0.025f,  0.098f, -0.005f),
+        new Vector3( 0.050f,  0.010f, -0.030f),
+        new Vector3(-0.070f,  0.080f,  0.040f),
+        new Vector3( 0.020f, -0.040f,  0.060f),
+        new Vector3(-0.030f,  0.020f, -0.070f),
+        new Vector3( 0.060f, -0.020f,  0.090f)
     };
 
-    void Start()
-    {
-        if (targetObject == null)
-        {
-            Debug.LogError("ÇëÔÚ Inspector ÖĞÖ¸¶¨Ä¿±êÎïÌå£¡");
-            return;
-        }
+    private Rigidbody rb;
+    private MeshRenderer meshRenderer;
+    private int lastAppliedIndex = -1;
 
-        rb = targetObject.GetComponent<Rigidbody>();
-        if (rb == null)
-        {
-            Debug.LogError("Ö¸¶¨µÄÄ¿±êÎïÌåÉÏÃ»ÓĞ Rigidbody ×é¼ş£¡");
-        }
-    }
+    public readonly Color[] colorList = new Color[15]
+    {
+        HexToColor("#00FFFF"), // 0
+        HexToColor("#4169E1"), // 1
+        HexToColor("#228B22"), // 2
+        HexToColor("#FFD700"), // 3
+        HexToColor("#FF8C00"), // 4
+        HexToColor("#8B00FF"), // 5
+        HexToColor("#FF1493"), // 6
+        HexToColor("#DC143C"), // 7
+        HexToColor("#D2691E"), // 8
+        HexToColor("#6A5ACD"), // 9
+        HexToColor("#6B8E23"), // 10
+        HexToColor("#000000"), // 11
+        HexToColor("#FF6347"), // 12
+        HexToColor("#4B0082"), // 13
+        HexToColor("#FA8072")  // 14
+    };
+
+    private bool _isPressed = false;
 
     void Update()
     {
-        if (rb == null) return;
+        TryGetComponents();
 
-        for (int i = 0; i < 10; i++)
+        // ğŸ® æ£€æµ‹ Xbox æ‰‹æŸ„ B é”®ï¼ˆjoystick button 1ï¼‰
+        if (!_isPressed && Input.GetKeyDown(KeyCode.JoystickButton1))
         {
-            KeyCode key = (i < 9) ? KeyCode.Alpha1 + i : KeyCode.Alpha0;
-            if (Input.GetKeyDown(key))
-            {
-                rb.centerOfMass = centerOfMassList[i];
-                Debug.Log($"°´ÏÂ {(i + 1) % 10} ¼ü£¬ÉèÖÃ Center of Mass Îª {centerOfMassList[i]}");
-            }
+            _isPressed = true;
+            CycleToNextCOM(); // åˆ‡æ¢åˆ°ä¸‹ä¸€ä¸ªé‡å¿ƒ
         }
+
+        if (_isPressed && Input.GetKeyUp(KeyCode.JoystickButton1))
+        {
+            _isPressed = false;
+        }
+
+        ApplyCenterOfMassAndColor();
+    }
+
+    void TryGetComponents()
+    {
+        if (targetObject == null) return;
+
+        if (rb == null)
+            rb = targetObject.GetComponent<Rigidbody>();
+
+        if (meshRenderer == null)
+            meshRenderer = targetObject.GetComponent<MeshRenderer>();
+    }
+
+    void ApplyCenterOfMassAndColor()
+    {
+        if (targetObject == null || rb == null || meshRenderer == null) return;
+
+        if (selectedCOMIndex != lastAppliedIndex && selectedCOMIndex >= 0 && selectedCOMIndex < 15)
+        {
+            // è®¾ç½®é‡å¿ƒ
+            rb.centerOfMass = centerOfMassList[selectedCOMIndex];
+
+            // è®¾ç½®é¢œè‰²ï¼ˆé€æ˜åº¦å›ºå®šä¸º120/255ï¼‰
+            Color baseColor = colorList[selectedCOMIndex];
+            baseColor.a = 120f / 255f;
+
+            Material mat = meshRenderer.sharedMaterial;
+            if (mat != null)
+            {
+                mat.color = baseColor;
+            }
+
+            lastAppliedIndex = selectedCOMIndex;
+        }
+    }
+
+    void CycleToNextCOM()
+    {
+        selectedCOMIndex = (selectedCOMIndex + 1) % centerOfMassList.Length;
+        Debug.Log($"ğŸ® Xbox B é”®æŒ‰ä¸‹ â†’ åˆ‡æ¢åˆ° COM_{selectedCOMIndex}");
+    }
+
+    static Color HexToColor(string hex)
+    {
+        Color color;
+        if (ColorUtility.TryParseHtmlString(hex, out color))
+        {
+            return color;
+        }
+        Debug.LogError("é¢œè‰²è§£æå¤±è´¥ï¼š" + hex);
+        return Color.white;
     }
 }

@@ -16,12 +16,12 @@ public class VisualDisplay : MonoBehaviour
     public Transform CubePoint_WU;
     public Transform CubePoint_XIAO;
 
-    [Header("Point2Point Vectors | 方块到投影点连线向量")]
-    public Vector3 ObjectPoint_DA;
-    public Vector3 ObjectPoint_SHI;
-    public Vector3 ObjectPoint_ZHONG;
-    public Vector3 ObjectPoint_WU;
-    public Vector3 ObjectPoint_XIAO;
+    //[Header("Point2Point Vectors | 方块到投影点连线向量")]
+    private Vector3 ObjectPoint_DA;
+    private Vector3 ObjectPoint_SHI;
+    private Vector3 ObjectPoint_ZHONG;
+    private Vector3 ObjectPoint_WU;
+    private Vector3 ObjectPoint_XIAO;
 
     private Vector3 localYCenterWorld;
     private float fixedRadius = 0.015f;
@@ -88,8 +88,8 @@ public class VisualDisplay : MonoBehaviour
             if (cubePoint != null)
             {
                 float slipDeltaY = projectedWorld.y - cubePoint.position.y;
-                if (Mathf.Abs(slipDeltaY) < 0.001f) slipDeltaY = 0f;
-                slipDeltaY = Mathf.Round(slipDeltaY * 1000f) / 1000f;
+                if (Mathf.Abs(slipDeltaY) < 0.0001f) slipDeltaY = 0f;
+                slipDeltaY = Mathf.Round(slipDeltaY * 1000000f) / 1000000f;
 
                 switch (i)
                 {

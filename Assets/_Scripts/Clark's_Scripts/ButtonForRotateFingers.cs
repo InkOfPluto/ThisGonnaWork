@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
+using UnityEngine.ProBuilder.Shapes;
 
 public class ButtonForRotateFingers : MonoBehaviour
 {
@@ -20,6 +21,8 @@ public class ButtonForRotateFingers : MonoBehaviour
 
     [SerializeField] private Transform cubeCenter;
     [SerializeField] private List<Transform> fingerCubes;
+    [SerializeField] private Transform cylinder;
+
 
     private Dictionary<Transform, float> lockedYPositions = new Dictionary<Transform, float>();
 
@@ -116,6 +119,14 @@ public class ButtonForRotateFingers : MonoBehaviour
                 follow.lockedYPositions = new Dictionary<Transform, float>(lockedYPositions);
             }
         }
+        // 修复 VisualDisplay 圆心高度的问题
+        if (cubeCenter != null && cylinder != null)
+        {
+            Vector3 cubePos = cubeCenter.position;
+            cubePos.y = cylinder.position.y; // 锁定为 cylinder 的 Y 值
+            cubeCenter.position = cubePos;
+        }
+
 
         foreach (var cube in fingerCubes)
         {

@@ -36,6 +36,10 @@ public class ButtonSwitchKeyboard : MonoBehaviour
 
         if (_isPressed && GetValue() - threshold <= 0)
             Released();
+        if (!_isPressed && Input.GetKeyDown(KeyCode.M))
+            Pressed();
+        if (_isPressed && Input.GetKeyDown(KeyCode.M))
+            Released();
 
         // 限制按钮移动范围
         Vector3 pos = transform.localPosition;
