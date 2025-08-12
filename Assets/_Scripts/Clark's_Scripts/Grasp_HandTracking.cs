@@ -4,53 +4,98 @@ using UnityEngine;
 
 public class Grasp_HandTracking : MonoBehaviour
 {
-    public Transform[] fingerTips;        // 手指指尖对象数组
-    public Transform thumbtip;            // 拇指指尖对象
-    public GameObject hand;               // 手部对象
+    [Header("手部引用 | Hand Refs")]
+    public Transform[] fingerTips;
+    public Transform thumbtip;
+    public GameObject hand;
 
     [Header("抓握距离参数")]
-    public float minGripDistance = 0.01f; // 手指最闭合时的距离
-    public float maxGripDistance = 0.1f; // 手完全张开时的距离
+    public float minGripDistance = 0.01f;
+    public float maxGripDistance = 0.1f;
 
-    void Update()
+    [Header("抓握次数统计")]
+    [ReadOnly, SerializeField] private int attempt = 0; // Inspector 只读显示
+
+    private bool hasClosed = false;
+
+    // 缓存引用，避免每帧查找
+    private ExperimentSaveData_JSON saveJSON;
+    private PincherController pincherController;
+
+    void Start()
     {
-        float fingertipDist = 0f;
-
-        // 计算所有手指指尖到拇指的平均距离
-        foreach (Transform t in fingerTips)
+        saveJSON = FindObjectOfType<ExperimentSaveData_JSON>();
+        if (hand != null)
         {
-            fingertipDist += Vector3.Distance(thumbtip.position, t.position);
-        }
-
-        float avfingertipDist = fingertipDist / fingerTips.Length;
-
-        // 将平均距离从 [min, max] 映射到 [-1, 1]：越闭合 -> 趋近 -1，越张开 -> 趋近 1
-        float normalized = Mathf.Clamp01((avfingertipDist - minGripDistance) / (maxGripDistance - minGripDistance));
-        float gripInput = normalized * 2f - 1f; // 线性映射到 [-1, 1]
-        //Debug.Log("GripInput is " + gripInput);
-
-        // 设置 GripState
-        PincherController pincherController = hand.GetComponent<PincherController>();
-        pincherController.gripState = GripStateForInput(gripInput);
-
-        // 调试输出
-        //Debug.Log($"[🤏] 平均指尖距: {avfingertipDist:F4} | input: {gripInput:F4}");
-    }
-
-    // GripState 三态判定
-    static GripState GripStateForInput(float input)
-    {
-        if (input < 0f)
-        {
-            return GripState.Closing;
-        }
-        else if (input > 0f)
-        {
-            return GripState.Opening;
+            pincherController = hand.GetComponent<PincherController>();
+            if (pincherController == null)
+                Debug.LogWarning("[Grasp_HandTracking] hand 上未找到 PincherController 组件。");
         }
         else
         {
-            return GripState.Fixed;
+            Debug.LogWarning("[Grasp_HandTracking] hand 未绑定。");
         }
+
+        // 基本参数保护
+        if (maxGripDistance <= minGripDistance)
+        {
+            Debug.LogWarning("[Grasp_HandTracking] maxGripDistance 应大于 minGripDistance，已自动微调。");
+            maxGripDistance = minGripDistance + 0.001f;
+        }
+    }
+
+    void Update()
+    {
+        if (pincherController == null || thumbtip == null || fingerTips == null || fingerTips.Length == 0)
+            return;
+
+        // 计算拇指与其余指尖的平均距离
+        float fingertipDist = 0f;
+        int validCount = 0;
+        for (int i = 0; i < fingerTips.Length; i++)
+        {
+            Transform t = fingerTips[i];
+            if (t == null) continue;
+            fingertipDist += Vector3.Distance(thumbtip.position, t.position);
+            validCount++;
+        }
+        if (validCount == 0) return;
+
+        float avfingertipDist = fingertipDist / validCount;
+
+        // 归一化到 [-1, 1]：越小越“闭合”（负），越大越“张开”（正）
+        float normalized = Mathf.Clamp01((avfingertipDist - minGripDistance) / (maxGripDistance - minGripDistance));
+        float gripInput = normalized * 2f - 1f;
+
+        // 写入抓取状态
+        pincherController.gripState = GripStateForInput(gripInput);
+
+        // 边沿检测：从张开 -> 闭合 计一次
+        if (pincherController.gripState == GripState.Closing && !hasClosed)
+        {
+            attempt++;
+            if (saveJSON != null) saveJSON.OnGraspAttempt(); // 用缓存，不再 FindObjectOfType
+            hasClosed = true;
+        }
+        else if (pincherController.gripState == GripState.Opening)
+        {
+            hasClosed = false;
+        }
+    }
+
+    public void ResetAttempt()
+    {
+        attempt = 0;
+        hasClosed = false; // 避免紧接着一次误判继续 +1
+    }
+
+    // 对外只读
+    public int AttemptCount => attempt;
+
+    static GripState GripStateForInput(float input)
+    {
+        if (input < 0f) return GripState.Closing;
+        if (input > 0f) return GripState.Opening;
+        return GripState.Fixed;
     }
 }

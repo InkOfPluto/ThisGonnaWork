@@ -66,8 +66,8 @@ public class MotorSlipTest : MonoBehaviour
     {
         Debug.Log($"▶️ 模拟滑动方向: {(direction == "positive" ? "向上↑" : "向下↓")}");
 
-        string command1 = direction == "positive" ? "f:150" : "b:150";  // COM5
-        string command2 = direction == "positive" ? "g:150" : "n:150";  // COM6
+        string command1 = direction == "positive" ? "fg:150" : "bn:150";  // COM5
+        string command2 = direction == "positive" ? "fg:150" : "bn:150";  // COM6
 
         while (true)
         {

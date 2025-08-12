@@ -46,6 +46,7 @@ Material:
     - _DstBlend: 10
     - _DstBlendAlpha: 10
     - _Surface: 1
+    - _WorkflowMode: 1
     - _ZWrite: 0
     m_Colors:
     - _BaseColor: {r: 0.69411767, g: 0.9820473, b: 1, a: 0}

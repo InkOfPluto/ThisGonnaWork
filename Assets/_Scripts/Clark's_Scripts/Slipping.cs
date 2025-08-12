@@ -1,112 +1,284 @@
 ﻿using UnityEngine;
 using System.IO.Ports;
 using System;
+using System.Collections.Generic;
 
 public class Slipping : MonoBehaviour
 {
     [Header("Reference to VisualDisplay")]
     public VisualDisplay visual;
 
-    private SerialPort serial1; // COM5 → 中指 + 无名指
-    private SerialPort serial2; // COM6 → 拇指 + 食指
+    [Header("Serial Port (Single)")]
+    public string portName = "COM11";
+    public int baudRate = 115200;
+    private SerialPort serial;
 
-    private bool isRunning = false;
+    [Header("Control Settings")]
+    [Tooltip("同一手指两次发送之间的冷却秒数，防止刷屏")]
+    public float cooldownTime = 0.04f;
 
-    [Header("Cooldown Settings")]
-    public float cooldownTime = 0.5f;
-    private float thumbCooldown = 0f, indexCooldown = 0f, middleCooldown = 0f, ringCooldown = 0f;
+    [Tooltip("全局映射阈值：|value| < inputMin 不发；|value| ∈ [inputMin, inputMax] → PWM ∈ [pwmMin,pwmMax]")]
+    public float inputMin = 0.0005f;   // 死区 & 映射起点
+    public float inputMax = 0.11f;     // 默认上限 0.11；但 >0.11 直接 ±255
+
+    [Tooltip("低端顺滑指数（>1 更柔和）")]
+    public float gamma = 1.2f;
+
+    [Tooltip("最小变化量（PWM 级），小于该差值则不重发")]
+    public int minDeltaPwm = 8;
+
+    [Header("PWM Range (Inspector 可调)")]
+    [Range(0, 255)]
+    public int pwmMin = 100;
+    [Range(0, 255)]
+    public int pwmMax = 255;
+
+    [Header("Height Limit")]
+    [Tooltip("cubetouching 高度低于此值时不向马达输入数据")]
+    public float minHeight = 0.8f;
+
+    [Header("Cubetouching Reference")]
+    [Tooltip("用于检测高度的 cubetouching 物体")]
+    public Transform cubetouching;
+
+    // 各手指独立冷却计时
+    private float thumbCooldown = 0f, indexCooldown = 0f, middleCooldown = 0f, ringCooldown = 0f, pinkyCooldown = 0f;
+
+    // 上次发送的带符号速度（用于防抖）
+    private readonly Dictionary<string, int> lastSent = new Dictionary<string, int> {
+        {"t", 0}, {"i", 0}, {"m", 0}, {"r", 0}, {"p", 0}
+    };
+
+    private float lastSlipEventTime = 0f;   // 最近一次有"有效输出"的时间戳（秒）
+    private bool anyFingerMoving = false;   // 是否有任何手指在运动
+
+    [Header("Constant Threshold | 固定阈值")]
+    // 固定硬阈值：超过即直接饱和到 ±255
+    public const float HARD_SAT_CUTOFF = 0.11f;
+
+    public float[] GetMotorSpeeds5()
+    {
+        return new float[5] {
+            lastSent["t"], lastSent["i"], lastSent["m"], lastSent["r"], lastSent["p"]
+        };
+    }
+
+    public float GetSlipProcessTime()
+    {
+        return Time.time - lastSlipEventTime;
+    }
+
+    void OnValidate()
+    {
+        pwmMin = Mathf.Clamp(pwmMin, 0, 255);
+        pwmMax = Mathf.Clamp(pwmMax, 0, 255);
+        if (pwmMin > pwmMax)
+        {
+            int tmp = pwmMin;
+            pwmMin = pwmMax;
+            pwmMax = tmp;
+        }
+        int span = Mathf.Max(1, pwmMax - pwmMin);
+        minDeltaPwm = Mathf.Clamp(minDeltaPwm, 1, span);
+
+        if (inputMax < inputMin)
+        {
+            // 防止写反
+            float t = inputMin;
+            inputMin = inputMax;
+            inputMax = t;
+        }
+    }
 
     void Start()
     {
-        OpenSerialPort(ref serial1, "COM5");
-        OpenSerialPort(ref serial2, "COM6");
+        OpenSerialPort(ref serial, portName, baudRate);
+        Debug.Log("🟢 Slipping ready. Single-port protocol: t/i/m/r/p±NNN; 's' for stop. Saturates to ±255 when |value| > 0.09.");
     }
 
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.Q))
-        {
-            isRunning = true;
-            Debug.Log("🟢 Haptic feedback started.");
-        }
-        if (Input.GetKeyDown(KeyCode.A))
-        {
-            isRunning = false;
-            Debug.Log("🔴 Haptic feedback stopped.");
-        }
-
-        if (!isRunning || visual == null) return;
+        if (visual == null) return;
 
         float now = Time.time;
 
-        // 分别对每根手指调用封装函数
-        SendMapped(serial2, visual.DistanceDA, ref thumbCooldown, now, "t", "Thumb");       // 拇指 → COM6
-        SendMapped(serial2, visual.DistanceSHI, ref indexCooldown, now, "i", "Index");      // 食指 → COM6
-        SendMapped(serial1, visual.DistanceZHONG, ref middleCooldown, now, "m", "Middle");  // 中指 → COM5
-        SendMapped(serial1, visual.DistanceWU, ref ringCooldown, now, "r", "Ring");         // 无名指 → COM5
+        // === 高度检测 ===
+        if (cubetouching != null && cubetouching.position.y < minHeight)
+        {
+            // 如果低于阈值且之前有手指在动，发送停止指令
+            if (anyFingerMoving)
+            {
+                StopMotors();
+                anyFingerMoving = false;
+            }
+            return;
+        }
+
+        var tokens = new List<string>(5);
+        bool needStop = false;
+
+        // 检查每个手指
+        needStop |= CheckFinger(tokens, visual.DistanceDA, ref thumbCooldown, now, "t", "Thumb");
+        needStop |= CheckFinger(tokens, visual.DistanceSHI, ref indexCooldown, now, "i", "Index");
+        needStop |= CheckFinger(tokens, visual.DistanceZHONG, ref middleCooldown, now, "m", "Middle");
+        needStop |= CheckFinger(tokens, visual.DistanceWU, ref ringCooldown, now, "r", "Ring");
+        needStop |= CheckFinger(tokens, visual.DistanceXIAO, ref pinkyCooldown, now, "p", "Pinky");
+
+        // 如果有手指需要停止，且所有手指都已停止，发送全局停止指令
+        if (needStop && AllFingersStoppedOrInDeadzone())
+        {
+            StopMotors();
+            anyFingerMoving = false;
+        }
+        else if (tokens.Count > 0)
+        {
+            // 有新的运动指令
+            anyFingerMoving = true;
+            lastSlipEventTime = Time.time;
+            SendLine(string.Join(",", tokens) + ",\n");
+        }
+
+        if (Input.GetKeyDown(KeyCode.Alpha0))
+        {
+            StopMotors();
+            anyFingerMoving = false;
+        }
     }
 
-    /// <summary>
-    /// 将滑动值映射后输出 指令+B 和 g/n（方向）
-    /// </summary>
-    void SendMapped(SerialPort port, float value, ref float cooldownTimer, float now, string prefix, string fingerName)
+    // 检查手指状态，返回是否需要停止
+    bool CheckFinger(List<string> tokens, float value, ref float cooldownTimer, float now, string prefix, string fingerName)
     {
-        if (now - cooldownTimer < cooldownTime) return;
+        if (now - cooldownTimer < cooldownTime) return false;
 
-        float absVal = Mathf.Abs(value);
-        if (absVal <= 0.0001f) return; // 滑动太小，忽略
+        float a = Mathf.Abs(value);
+        int previousValue = lastSent[prefix];  // 在方法开始时获取之前的值
 
-        // 映射范围：0.0001 ~ 0.013 → 100 ~ 255
-        int B = Mathf.RoundToInt(Mathf.Lerp(100f, 255f, Mathf.InverseLerp(0.0001f, 0.013f, absVal)));
-        B = Mathf.Clamp(B, 100, 255);
-
-        try
+        // 当值小于死区时
+        if (a < inputMin)
         {
-            port.Write(prefix + B.ToString());
-            port.Write("\n");
-            Debug.Log($"✅ [{fingerName}] Power Sent: {prefix}{B}");
-        }
-        catch (Exception e)
-        {
-            Debug.LogWarning($"⚠️ [{fingerName}] Failed to write {prefix}{B}: {e.Message}");
+            if (previousValue != 0)  // 如果之前有速度，标记需要停止
+            {
+                lastSent[prefix] = 0;
+                cooldownTimer = now;
+                Debug.Log($"🔻 {fingerName} entered deadzone (was {previousValue})");
+                return true;  // 返回需要停止
+            }
+            return false;
         }
 
-        try
+        int signed;
+        if (a > HARD_SAT_CUTOFF)
         {
-            string dir = value > 0 ? "g" : "n";
-            port.Write(dir);
-            port.Write("\n");
-            Debug.Log($"➡️ [{fingerName}] Direction Sent: {dir}");
+            signed = (value >= 0f) ? 255 : -255;
         }
-        catch (Exception e)
+        else
         {
-            Debug.LogWarning($"⚠️ [{fingerName}] Failed to write direction: {e.Message}");
+            // 正常比例映射：inputMin..inputMax → pwmMin..pwmMax，再取正负号
+            float t = Mathf.InverseLerp(inputMin, inputMax, a);
+            t = Mathf.Pow(Mathf.Clamp01(t), gamma);
+            int mag = Mathf.RoundToInt(Mathf.Lerp((float)pwmMin, (float)pwmMax, t));
+            mag = Mathf.Clamp(mag, pwmMin, pwmMax);
+            signed = (value >= 0f) ? mag : -mag;
         }
 
+        if (Mathf.Abs(signed - previousValue) < minDeltaPwm) return false;
+
+        lastSent[prefix] = signed;
+        tokens.Add($"{prefix}{signed}");
         cooldownTimer = now;
+
+        return false;
     }
 
-    /// <summary>
-    /// 串口初始化封装
-    /// </summary>
-    void OpenSerialPort(ref SerialPort port, string portName)
+    // 检查是否所有手指都已停止或在死区
+    bool AllFingersStoppedOrInDeadzone()
+    {
+        return lastSent["t"] == 0 &&
+               lastSent["i"] == 0 &&
+               lastSent["m"] == 0 &&
+               lastSent["r"] == 0 &&
+               lastSent["p"] == 0;
+    }
+
+    void OpenSerialPort(ref SerialPort port, string name, int baud)
     {
         try
         {
-            port = new SerialPort(portName, 115200);
-            port.ReadTimeout = 50;
+            if (port != null && port.IsOpen) port.Close();
+            port = new SerialPort(name, baud) { ReadTimeout = 50, NewLine = "\n" };
             port.Open();
-            Debug.Log($"✅ Serial ({portName}) opened.");
+            Debug.Log($"✅ Serial opened: {name}");
         }
         catch (Exception e)
         {
-            Debug.LogWarning($"❌ Failed to open {portName}: {e.Message}");
+            Debug.LogWarning($"❌ Failed to open {name}: {e.Message}");
+        }
+    }
+
+    void SendLine(string line)
+    {
+        if (serial == null || !serial.IsOpen)
+        {
+            Debug.LogWarning("⚠️ Serial not open. Reopening...");
+            OpenSerialPort(ref serial, portName, baudRate);
+        }
+
+        if (serial != null && serial.IsOpen)
+        {
+            try
+            {
+                serial.Write(line);
+                Debug.Log("📤 Sent: " + line.Trim());
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning("⚠️ Send failed: " + line.Trim() + " → " + e.Message);
+            }
+        }
+        else
+        {
+            Debug.LogError("❌ Serial still not open, cannot send.");
         }
     }
 
     void OnApplicationQuit()
     {
-        if (serial1 != null && serial1.IsOpen) serial1.Close();
-        if (serial2 != null && serial2.IsOpen) serial2.Close();
+        if (serial != null && serial.IsOpen) serial.Close();
+    }
+
+    // ======= 提供给事件调用的方法 =======
+    public void StopMotors()
+    {
+        SendLine("s\n");
+        Debug.Log("🛑 Stop command sent → 's'");
+
+        // 重置所有手指 PWM 记录
+        var keys = new List<string>(lastSent.Keys);
+        foreach (var key in keys) lastSent[key] = 0;
+    }
+
+    // 可选的回调，方便调试或计数
+    public void OnContactEnterEvent(Collider other)
+    {
+        Debug.Log($"🔗 Enter event from: {other.name}");
+    }
+
+    public void OnContactExitEvent(Collider other)
+    {
+        Debug.Log($"🔗 Exit event from: {other.name}");
+
+        // 当物体退出碰撞时，也可以在这里调用停止
+        if (AllFingersStoppedOrInDeadzone())
+        {
+            StopMotors();
+            anyFingerMoving = false;
+        }
+    }
+
+    // ===== 编辑器停止播放 / 脚本被禁用时的急停 =====
+    void OnDisable()
+    {
+        StopMotors();
+        Debug.Log("🛑 OnDisable triggered → global stop.");
     }
 }

@@ -19,6 +19,9 @@ TagManager:
   - Object
   - TableTag
   - Threshold
+  - Cylinder
+  - dropsound
+  - Table
   layers:
   - Default
   - TransparentFX

@@ -1,30 +1,35 @@
 using UnityEngine;
 
+[ExecuteAlways] // 即使不运行游戏，也能在 Scene 视图更新
 public class CenterOfMassVisualizer : MonoBehaviour
 {
-    public GameObject markerPrefab; // 拖入发光小球Prefab
-    public float Size;
-    private GameObject markerInstance;
+    [Header("操作说明 | Instructions")]
+    [ReadOnly]
+    [TextArea(3, 10)]
+    public string instructions =
+        "功能：在 Scene 视图和运行时绘制 Rigidbody 的质心位置（球形 Gizmo）\n" +
+        "Inspector：size 控制球的半径\n" +
+        "Inspector：gizmoColor 控制 Gizmo 的颜色\n" +
+        "要求：对象必须有 Rigidbody 组件，否则不显示\n" +
+        "运行/编辑模式：都会实时显示质心位置\n";
+
+    [Header("Gizmo Settings | Gizmo 参数")]
+    public float size = 0.01f;                 // 球的半径
+    public Color gizmoColor = Color.yellow;    // 球的颜色
+
     private Rigidbody rb;
 
-    void Start()
+    void OnDrawGizmos()
     {
-        rb = GetComponent<Rigidbody>();
+        // 获取 Rigidbody（编辑器模式也可以）
+        if (rb == null)
+            rb = GetComponent<Rigidbody>();
 
-        // 实例化标记球
-        if (markerPrefab != null)
+        if (rb != null)
         {
-            markerInstance = Instantiate(markerPrefab);
-            markerInstance.transform.localScale = Vector3.one * Size; // 可调节大小
-        }
-    }
-
-    void Update()
-    {
-        if (markerInstance != null && rb != null)
-        {
-            // 将球体位置更新为质心的世界坐标
-            markerInstance.transform.position = rb.worldCenterOfMass;
+            // 画球
+            Gizmos.color = gizmoColor;
+            Gizmos.DrawSphere(rb.worldCenterOfMass, size);
         }
     }
 }
