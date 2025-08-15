@@ -4,8 +4,8 @@ using UnityEngine;
 public class CylinderVisibilityController : MonoBehaviour
 {
     [Header("References")]
-    [SerializeField] private ModeSwitch modeSwitch;   // ÍÏ×§ÄãµÄ ModeSwitch
-    [SerializeField] private MeshRenderer[] renderers; // ¿ÉÁô¿Õ£¬×Ô¶¯×¥È¡
+    [SerializeField] private ModeSwitch modeSwitch;   // ï¿½ï¿½×§ï¿½ï¿½ï¿½ ModeSwitch
+    [SerializeField] private MeshRenderer[] renderers; // ï¿½ï¿½ï¿½ï¿½ï¿½Õ£ï¿½ï¿½Ô¶ï¿½×¥È¡
 
     [Header("Debug (ReadOnly)")]
     [SerializeField, ReadOnly] private bool isInsideThreshold = false;
@@ -61,10 +61,10 @@ public class CylinderVisibilityController : MonoBehaviour
         {
             case ModeSwitch.ExperimentMode.Visual:
             case ModeSwitch.ExperimentMode.VisualHaptic:
-                visible = true; // Ê¼ÖÕÏÔÊ¾
+                visible = true; // Ê¼ï¿½ï¿½ï¿½ï¿½Ê¾
                 break;
             case ModeSwitch.ExperimentMode.Haptic:
-                visible = isInsideThreshold; // ãÐÖµÄÚ²ÅÏÔÊ¾
+                visible = isInsideThreshold; // ï¿½ï¿½Öµï¿½Ú²ï¿½ï¿½ï¿½Ê¾
                 break;
             default:
                 visible = true;

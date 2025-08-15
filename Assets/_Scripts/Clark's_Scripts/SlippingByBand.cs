@@ -38,6 +38,11 @@ public class SlippingByBand: MonoBehaviour
     [Range(3, 12)]
     public int numberOfBands = 3;
 
+    [Header("Non-uniform Binning | 非均匀分段")]
+    [Tooltip("非均匀分段的幂次指数 (0<beta<1)，越小则低值区间越窄越敏感")]
+    [Range(0.2f, 0.9f)]
+    public float beta = 0.5f;
+
     [Header("Height Limit")]
     [Tooltip("cubetouching 高度低于此值时不向马达输入数据")]
     public float minHeight = 0.8f;
@@ -60,8 +65,9 @@ public class SlippingByBand: MonoBehaviour
     // 固定硬阈值：超过即直接饱和到 ±255
     private const float HARD_SAT_CUTOFF = 0.09f;
 
-    // 🔧 新增：预计算的PWM区间值
+    // 🔧 新增：预计算的PWM区间值和阈值
     private int[] pwmBands;
+    private float[] inputThresholds;
 
     public float[] GetMotorSpeeds5()
     {
@@ -99,38 +105,62 @@ public class SlippingByBand: MonoBehaviour
         // 确保区间数量合理
         numberOfBands = Mathf.Clamp(numberOfBands, 3, 12);
         
-        // 重新计算PWM区间
-        CalculatePWMBands();
+        // 确保beta在合理范围内
+        beta = Mathf.Clamp(beta, 0.2f, 0.9f);
+        
+        // 重新计算PWM区间和阈值
+        CalculateNonUniformBands();
     }
 
     void Start()
     {
-        // 计算PWM区间值
-        CalculatePWMBands();
+        // 计算非均匀PWM区间值和阈值
+        CalculateNonUniformBands();
         
         OpenSerialPort(ref serial, portName, baudRate);
-        Debug.Log($"🟢 SlippingByBand ready. Band-based mapping with {numberOfBands} discrete PWM levels. Single-port protocol: t/i/m/r/p±NNN; 's' for stop. Saturates to ±255 when |value| > 0.09.");
+        Debug.Log($"🟢 SlippingByBand ready. Non-uniform band-based mapping with {numberOfBands} discrete PWM levels (beta={beta:F2}). Single-port protocol: t/i/m/r/p±NNN; 's' for stop. Saturates to ±255 when |value| > 0.09.");
     }
 
-    // 🔧 新增：计算PWM区间值
-    private void CalculatePWMBands()
+    // 🔧 修改：计算非均匀PWM区间值和输入阈值
+    private void CalculateNonUniformBands()
     {
         pwmBands = new int[numberOfBands];
+        inputThresholds = new float[numberOfBands + 1];
         
+        // 计算输入阈值（非均匀分段）
+        for (int k = 0; k <= numberOfBands; k++)
+        {
+            // 在变换空间中等分 [0,1]
+            float y = (float)k / numberOfBands;
+            
+            // 幂次反变换：y = x^beta => x = y^(1/beta)
+            float x = Mathf.Pow(y, 1.0f / beta);
+            
+            // 映射回原输入范围
+            inputThresholds[k] = inputMin + (inputMax - inputMin) * x;
+        }
+        
+        // 计算每个区间对应的PWM值（保持原有的gamma曲线）
         for (int i = 0; i < numberOfBands; i++)
         {
-            // 计算每个区间对应的标准化位置
             float t = (float)i / (numberOfBands - 1);
-            
-            // 应用 gamma 曲线
             t = Mathf.Pow(t, gamma);
-            
-            // 映射到 PWM 范围
             int pwmValue = Mathf.RoundToInt(Mathf.Lerp(pwmMin, pwmMax, t));
             pwmBands[i] = Mathf.Clamp(pwmValue, pwmMin, pwmMax);
         }
         
-        Debug.Log($"🎛️ PWM Bands calculated: {string.Join(", ", pwmBands)}");
+        // 调试输出
+        string thresholdStr = string.Join(", ", System.Array.ConvertAll(inputThresholds, x => x.ToString("F6")));
+        string pwmStr = string.Join(", ", pwmBands);
+        Debug.Log($"🎛️ Non-uniform input thresholds (beta={beta:F2}): [{thresholdStr}]");
+        Debug.Log($"🎛️ PWM Bands: [{pwmStr}]");
+        
+        // 显示分段区间宽度（用于验证非均匀性）
+        for (int i = 0; i < numberOfBands; i++)
+        {
+            float width = inputThresholds[i + 1] - inputThresholds[i];
+            Debug.Log($"   Band {i}: [{inputThresholds[i]:F6}, {inputThresholds[i + 1]:F6}) → PWM {pwmBands[i]}, width={width:F6}");
+        }
     }
 
     void Update()
@@ -182,25 +212,29 @@ public class SlippingByBand: MonoBehaviour
         }
     }
 
-    // 🔧 新增：基于区间的速度映射方法
+    // 🔧 修改：基于非均匀分段的速度映射方法
     private int MapValueToBandedSpeed(float absValue)
     {
-        if (pwmBands == null || pwmBands.Length == 0)
+        if (inputThresholds == null || pwmBands == null || pwmBands.Length == 0)
         {
-            CalculatePWMBands();
+            CalculateNonUniformBands();
         }
         
-        // 将输入值映射到区间索引
-        float range = inputMax - inputMin;
-        float normalizedValue = (absValue - inputMin) / range;
-        normalizedValue = Mathf.Clamp01(normalizedValue);
+        // 边界处理
+        if (absValue <= inputThresholds[0]) return pwmBands[0];
+        if (absValue >= inputThresholds[numberOfBands]) return pwmBands[numberOfBands - 1];
         
-        // 计算区间索引
-        int bandIndex = Mathf.FloorToInt(normalizedValue * numberOfBands);
-        bandIndex = Mathf.Clamp(bandIndex, 0, numberOfBands - 1);
+        // 查找输入值所属的区间
+        for (int i = 0; i < numberOfBands; i++)
+        {
+            if (absValue < inputThresholds[i + 1])
+            {
+                return pwmBands[i];
+            }
+        }
         
-        // 返回对应区间的PWM值
-        return pwmBands[bandIndex];
+        // 默认返回最后一个区间的PWM值
+        return pwmBands[numberOfBands - 1];
     }
 
     // 检查手指状态，返回是否需要停止
@@ -233,7 +267,7 @@ public class SlippingByBand: MonoBehaviour
         }
         else
         {
-            // 🔧 修改：使用基于区间的映射替代连续映射
+            // 🔧 修改：使用基于非均匀分段的映射
             int mag = MapValueToBandedSpeed(a);
             signed = (value >= 0f) ? mag : -mag;
         }

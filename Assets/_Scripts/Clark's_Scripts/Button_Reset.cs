@@ -31,11 +31,11 @@ public class Button_Reset : MonoBehaviour
         if (_isPressed && GetValue() - threshold <= 0)
             Released();
 
-        // 👉 检测 Xbox 控制器的 B 键（默认是 "joystick button 1"）
-        if (!_isPressed && Input.GetKeyDown(KeyCode.JoystickButton1))
+        // 👉 检测 Xbox 控制器的 A 键（默认是 "joystick button 0"）
+        if (!_isPressed && Input.GetKeyDown(KeyCode.JoystickButton0))
             Pressed();
 
-        if (_isPressed && Input.GetKeyUp(KeyCode.JoystickButton1))
+        if (_isPressed && Input.GetKeyUp(KeyCode.JoystickButton0))
             Released();
 
         // 限制按钮移动范围

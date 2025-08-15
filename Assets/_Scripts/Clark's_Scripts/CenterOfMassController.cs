@@ -1,5 +1,7 @@
 ﻿// 文件名：CenterOfMassController.cs
+using System;
 using UnityEngine;
+using UnityEngine.Events;
 
 [ExecuteAlways]
 public class CenterOfMassController : MonoBehaviour
@@ -13,30 +15,48 @@ public class CenterOfMassController : MonoBehaviour
     [Header("目标物体 | Target Object（必须带 Rigidbody）")]
     public GameObject targetObject;
 
+    [Header("圆柱体中心引用 | Cylinder Center Reference（可选）")]
+    public Transform cylinderCenter;
+
     [Header("质心序号 | COM Index（0 ~ N-1）")]
     [Range(0, 15)]
     public int selectedCOMIndex = 0;
 
-    [Header("重心坐标列表 | Center of Mass List（可在 Inspector 自行调整长度与值）")]
-    public Vector3[] centerOfMassList = new Vector3[]
+    // —— 仅保留距离+角度的定义 —— //
+    [Header("距离-角度定义 | Distance-Angle Definitions（索引与数量决定最终 COM 列表）")]
+    [SerializeField]
+    private COMDistanceAngle[] comDistanceAngles = new COMDistanceAngle[]
     {
-        new Vector3( 0.000f,  0.000f,  0.000f),  // 0
-        new Vector3( 0.081f,  0.047f, -0.039f), // 1
-        new Vector3(-0.093f, -0.019f,  0.088f), // 2
-        new Vector3( 0.014f,  0.097f, -0.074f), // 3
-        new Vector3(-0.078f,  0.065f,  0.022f), // 4
-        new Vector3( 0.058f, -0.091f, -0.067f), // 5
-        new Vector3(-0.006f,  0.030f,  0.096f), // 6
-        new Vector3( 0.087f, -0.058f,  0.079f), // 7
-        new Vector3(-0.091f, -0.031f, -0.092f), // 8
-        new Vector3( 0.025f,  0.098f, -0.005f), // 9
-        new Vector3( 0.050f,  0.010f, -0.030f), // 10
-        new Vector3(-0.070f,  0.080f,  0.040f), // 11
-        new Vector3( 0.020f, -0.040f,  0.060f), // 12
-        new Vector3(-0.030f,  0.020f, -0.070f), // 13
-        new Vector3( 0.060f, -0.020f,  0.090f), // 14
-        new Vector3(-0.044f,  0.055f, -0.083f), // 15
+        new COMDistanceAngle(0.000f,   0.0f),   // 0 - Center
+        new COMDistanceAngle(0.100f,   0.0f),   // 1 - Forward
+        new COMDistanceAngle(0.100f,  45.0f),   // 2 - Front-Right
+        new COMDistanceAngle(0.100f,  90.0f),   // 3 - Right
+        new COMDistanceAngle(0.100f, 135.0f),   // 4 - Back-Right
+        new COMDistanceAngle(0.100f, 180.0f),   // 5 - Back
+        new COMDistanceAngle(0.100f, 225.0f),   // 6 - Back-Left
+        new COMDistanceAngle(0.100f, 270.0f),   // 7 - Left
+        new COMDistanceAngle(0.100f, 315.0f),   // 8 - Front-Left
+        new COMDistanceAngle(0.050f,  30.0f),   // 9 - Near
+        new COMDistanceAngle(0.050f,  60.0f),   // 10
+        new COMDistanceAngle(0.050f, 120.0f),   // 11
+        new COMDistanceAngle(0.050f, 150.0f),   // 12
+        new COMDistanceAngle(0.050f, 210.0f),   // 13
+        new COMDistanceAngle(0.050f, 240.0f),   // 14
+        new COMDistanceAngle(0.050f, 300.0f),   // 15
     };
+
+    [Header("同距离微扰参数 | Jitter For Same Distance")]
+    public bool enableRandomJitter = true;
+    [Tooltip("角度扰动（度），正负对称")]
+    public float randomAngleJitterDeg = 5f;
+    [Tooltip("半径扰动（米），正负对称")]
+    public float randomRadiusJitter = 0.01f;
+    [Tooltip("同一索引用于可复现随机的种子偏移（修改以生成新一组扰动）")]
+    public int jitterSeedOffset = 12345;
+
+    // —— 兼容其它脚本：保留相同的公开字段名与索引 —— //
+    [Header("重心坐标列表（自动由距离-角度生成）| Auto-built From Distance-Angle")]
+    public Vector3[] centerOfMassList = new Vector3[16];
 
     [Header("UI 引用 | UI References")]
     public GameObject countingText;
@@ -53,11 +73,24 @@ public class CenterOfMassController : MonoBehaviour
     [Header("切换重心时需要清零的抓握计数器 | Grasp Counters To Reset")]
     public Grasp_HandTracking[] graspCounters; // 在 Inspector 里把有计数的手脚本拖进来
 
-    [Header("旋转按钮 | Rotate Button（切换 COM 时强制进入旋转模式）")]
-    public ButtonForRotateFingers rotateButton; // 在 Inspector 里拖入 ButtonForRotateFingers 对象
-
     [Header("Goal 触发器 | Goal Triggers（切换 COM 时重置以重新出现）")]
     public GoalTriggerController[] goalTriggers; // 把挂了 GoalTriggerController 的 goal 物体拖进来
+
+    // —— 新增：事件（可在代码/Inspector 订阅） —— //
+    [Header("事件（Inspector 可配）| Events (UnityEvent)")]
+    [Tooltip("当请求切到下一个 COM 并成功时触发（参数：新的 COM 索引）")]
+    public UnityEvent<int> onNextCOMChanged;
+    [Tooltip("当实际应用某个 COM（rb.centerOfMass 设置完成）时触发（参数：当前 COM 索引）")]
+    public UnityEvent<int> onCOMApplied;
+    [Tooltip("当走完最后一个 COM，进入 ChangingMode 提示时触发")]
+    public UnityEvent onCycleCompleted;
+
+    /// <summary>当请求切到下一个 COM 并成功时（参数：新的索引）。</summary>
+    public event Action<int> NextCOMChanged;
+    /// <summary>当实际应用某个 COM（rb.centerOfMass 设置完成）（参数：当前索引）。</summary>
+    public event Action<int> COMApplied;
+    /// <summary>当所有 COM 已完成时。</summary>
+    public event Action CycleCompleted;
 
     // —— 运行期状态 —— //
     private Rigidbody rb;
@@ -65,12 +98,26 @@ public class CenterOfMassController : MonoBehaviour
     private bool _isPressed = false;
     private bool _cycleCompleted = false;
 
-    ExperimentSaveData_JSON saveJSON;
+    // —— 数据结构 —— //
+    [Serializable]
+    public struct COMDistanceAngle
+    {
+        [Tooltip("从圆柱体中心到重心的距离（米）")]
+        public float distance;
+        [Tooltip("XZ 平面角度（度），0 度为 Z+ 方向，顺时针为正")]
+        public float angleInDegrees;
+
+        public COMDistanceAngle(float distance, float angleInDegrees)
+        {
+            this.distance = distance;
+            this.angleInDegrees = angleInDegrees;
+        }
+    }
 
     private void Start()
     {
-        saveJSON = FindObjectOfType<ExperimentSaveData_JSON>();
         TryGetComponents();
+        RebuildCenterOfMassList(); // 先生成列表，保证 Apply 生效
         SetExperimentVisualState(showCounting: true, showObjects: true);
         if (changingModeText) changingModeText.SetActive(false);
         if (changingModeBackground) changingModeBackground.SetActive(false);
@@ -82,15 +129,17 @@ public class CenterOfMassController : MonoBehaviour
     private void Update()
     {
         TryGetComponents();
+        RebuildCenterOfMassList(); // 允许在编辑器/运行时修改参数后即时更新
 
         if (Application.isPlaying)
         {
             if (!_cycleCompleted)
             {
+                // —— 将按键逻辑统一走公共入口 —— //
                 if (!_isPressed && (Input.GetKeyDown(KeyCode.JoystickButton1) || Input.GetKeyDown(KeyCode.G)))
                 {
                     _isPressed = true;
-                    CycleToNextCOM_NoLoop();
+                    RequestNextCOM_NoLoop(); // <—— 统一入口：外部脚本也可直接调用这个方法
                 }
                 if (_isPressed && (Input.GetKeyUp(KeyCode.JoystickButton1) || Input.GetKeyUp(KeyCode.G)))
                 {
@@ -108,6 +157,63 @@ public class CenterOfMassController : MonoBehaviour
         if (rb == null) rb = targetObject.GetComponent<Rigidbody>();
     }
 
+    /// <summary>
+    /// 由距离+角度生成 centerOfMassList（保持索引与长度不变）
+    /// Build centerOfMassList from distance-angle while keeping indices intact.
+    /// </summary>
+    void RebuildCenterOfMassList()
+    {
+        if (comDistanceAngles == null || comDistanceAngles.Length == 0)
+        {
+            centerOfMassList = Array.Empty<Vector3>();
+            return;
+        }
+
+        if (centerOfMassList == null || centerOfMassList.Length != comDistanceAngles.Length)
+            centerOfMassList = new Vector3[comDistanceAngles.Length];
+
+        // 参考点：以 cylinderCenter（若提供）在目标物体的局部坐标为中心；否则 (0,0,0)
+        Vector3 baseLocalCenter = Vector3.zero;
+        if (cylinderCenter != null && targetObject != null)
+        {
+            baseLocalCenter = targetObject.transform.InverseTransformPoint(cylinderCenter.position);
+        }
+
+        for (int i = 0; i < comDistanceAngles.Length; i++)
+        {
+            var da = comDistanceAngles[i];
+            float dist = Mathf.Max(0f, da.distance);
+            float angleDeg = da.angleInDegrees;
+
+            // 可复现随机：使用索引+距离哈希作为种子
+            if (enableRandomJitter && (randomAngleJitterDeg > 0f || randomRadiusJitter > 0f))
+            {
+                int seed = i * 73856093 ^ jitterSeedOffset ^ Mathf.RoundToInt(dist * 10000f);
+                System.Random prng = new System.Random(seed);
+
+                // 映射到 [-1,1]
+                float u1 = (float)prng.NextDouble() * 2f - 1f;
+                float u2 = (float)prng.NextDouble() * 2f - 1f;
+
+                float dAngle = u1 * randomAngleJitterDeg;   // 度
+                float dRad = u2 * randomRadiusJitter;       // 米
+
+                angleDeg += dAngle;
+                dist = Mathf.Max(0f, dist + dRad);
+            }
+
+            float rad = angleDeg * Mathf.Deg2Rad;
+            float x = dist * Mathf.Sin(rad);
+            float z = dist * Mathf.Cos(rad);
+
+            centerOfMassList[i] = new Vector3(
+                baseLocalCenter.x + x,
+                baseLocalCenter.y, // 允许 cylinderCenter 具有非零 y，高度与参考点一致
+                baseLocalCenter.z + z
+            );
+        }
+    }
+
     void ApplyCenterOfMass(bool force = false)
     {
         if (targetObject == null || rb == null || centerOfMassList == null || centerOfMassList.Length == 0) return;
@@ -118,41 +224,48 @@ public class CenterOfMassController : MonoBehaviour
             rb.centerOfMass = centerOfMassList[selectedCOMIndex];
             lastAppliedIndex = selectedCOMIndex;
 
-            // 日志记录
-            if (saveJSON != null)
-            {
-                saveJSON.OnCOMChanged(selectedCOMIndex, centerOfMassList[selectedCOMIndex]);
-            }
-
-            // —— 真实“应用了新 COM”后的回调 —— //
             ResetAttemptsOnCOMChange();   // 清零抓握计数
             ResetGoalsOnCOMChange();      // 让 goal 重新出现（关键行）
+
+            // —— 触发“已应用 COM”的事件 —— //
+            onCOMApplied?.Invoke(selectedCOMIndex);
+            COMApplied?.Invoke(selectedCOMIndex);
         }
     }
 
-    void CycleToNextCOM_NoLoop()
+    // ======= ✅ 对外公开：请求切到下一个 COM（不循环） ======= //
+    /// <summary>
+    /// 请求切换到下一个 COM（不循环）。可被其它脚本直接调用。
+    /// 返回值：true 表示确实切到了下一个；false 表示已经到末尾（会触发完成事件）。
+    /// </summary>
+    public bool RequestNextCOM_NoLoop()
     {
-        if (centerOfMassList == null || centerOfMassList.Length == 0) return;
+        if (_cycleCompleted) return false;
+        if (centerOfMassList == null || centerOfMassList.Length == 0) return false;
 
         if (selectedCOMIndex >= centerOfMassList.Length - 1)
         {
             OnCompleteAllCOMs();
-            return;
+            return false;
         }
 
         selectedCOMIndex = Mathf.Clamp(selectedCOMIndex + 1, 0, centerOfMassList.Length - 1);
         Debug.Log($"🎮 切换到 COM_{selectedCOMIndex}");
 
-        // 切换 COM 的同时，进入旋转模式（Rotate）
-        if (rotateButton != null)
-        {
-            rotateButton.EnterRotateModeFromCOMChange();
-        }
-        else
-        {
-            Debug.LogWarning("⚠️ rotateButton 未绑定，无法在切换 COM 时进入旋转模式。");
-        }
-        // 注意：不在这里重置 goal；统一在 ApplyCenterOfMass 的“实际应用时”重置
+        // —— 触发“成功切到下一个 COM”的事件（此时索引已变化，稍后 ApplyCenterOfMass 会真正应用） —— //
+        onNextCOMChanged?.Invoke(selectedCOMIndex);
+        NextCOMChanged?.Invoke(selectedCOMIndex);
+
+        // 立即应用，确保外部订阅者拿到已写入 rb.centerOfMass 的时机
+        ApplyCenterOfMass(force: true);
+        return true;
+    }
+
+    // —— 兼容旧命名（如需保留可见性） —— //
+    [Obsolete("请改用 RequestNextCOM_NoLoop()")]
+    public void CycleToNextCOM_NoLoop()
+    {
+        RequestNextCOM_NoLoop();
     }
 
     void OnCompleteAllCOMs()
@@ -162,6 +275,9 @@ public class CenterOfMassController : MonoBehaviour
         if (changingModeText) changingModeText.SetActive(true);
         if (changingModeBackground) changingModeBackground.SetActive(true);
         Debug.Log("✅ 已完成所有质心；停止循环，进入 ChangingMode 提示。");
+
+        onCycleCompleted?.Invoke();
+        CycleCompleted?.Invoke();
     }
 
     public void ResetForNewMode()
@@ -196,10 +312,13 @@ public class CenterOfMassController : MonoBehaviour
     {
         if (!Application.isPlaying)
         {
+            // 保持索引有效
             if (centerOfMassList != null && centerOfMassList.Length > 0)
             {
                 selectedCOMIndex = Mathf.Clamp(selectedCOMIndex, 0, centerOfMassList.Length - 1);
             }
+            // 实时重建，方便在 Inspector 中调参
+            RebuildCenterOfMassList();
         }
     }
 #endif

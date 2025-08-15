@@ -10,7 +10,7 @@ public class ModeSwitch : MonoBehaviour
     }
 
     [Header("Instructions | 操作说明")]
-    [ReadOnly]
+    [ReadOnly] // 继续使用你已有的只读特性
     [TextArea(3, 10)]
     public string instructions =
         "Inspector 设置 Participant ID（1-30）决定模式序列；播放后按 Q 循环切换模式。\n" +
@@ -24,10 +24,18 @@ public class ModeSwitch : MonoBehaviour
 
     [Header("References | 引用组件")]
     public MonoBehaviour slippingScript;
-    ExperimentSaveData_JSON saveJSON;
 
     [Header("CenterOfMass  | 控制器（用于模式切换时重置）")]
     public CenterOfMassController comController;
+
+    // NEW —— 仅在 Haptic 模式下控制圆柱体可见性
+    [Header("Haptic Render Control | 触觉模式可见性")]
+    [Tooltip("阈值区的 Collider（建议为触发器或包络区域）")]
+    public Collider thresholdCollider; // 阈值区
+    [Tooltip("圆柱体自身的 Collider")]
+    public Collider cylinderCollider;  // 圆柱体
+    [Tooltip("圆柱体的 Renderer（关闭/开启可见性）")]
+    public Renderer cylinderRenderer;  // 圆柱体渲染器
 
     private int initialParticipantID;
     private bool idLocked = false;
@@ -35,9 +43,11 @@ public class ModeSwitch : MonoBehaviour
     private ExperimentMode[] cachedSequence = null;
     private ExperimentMode runtimeMode;
 
+    // NEW：避免重复日志
+    private bool hapticVisibilityRefsWarned = false;
+
     private void Start()
     {
-        saveJSON = FindObjectOfType<ExperimentSaveData_JSON>();
 
         if (!TryGetSequenceByParticipant(participantID, out cachedSequence))
         {
@@ -54,12 +64,6 @@ public class ModeSwitch : MonoBehaviour
         modeLocked = true;
 
         ApplyMode();
-
-        if (saveJSON != null)
-        {
-            saveJSON.SetParticipant(participantID.ToString());
-            saveJSON.OnModeChanged(currentMode.ToString());
-        }
 
         if (comController != null)
             comController.ResetForNewMode();
@@ -80,6 +84,12 @@ public class ModeSwitch : MonoBehaviour
         if (Application.isPlaying && Input.GetKeyDown(KeyCode.Q))
         {
             CycleModeLockedSequence();
+        }
+
+        // NEW：仅在 Haptic 模式下，实时更新圆柱体可见性
+        if (Application.isPlaying && runtimeMode == ExperimentMode.Haptic)
+        {
+            UpdateHapticCylinderVisibility();
         }
     }
 
@@ -103,12 +113,6 @@ public class ModeSwitch : MonoBehaviour
         int nextIndex = currentIndex + 1;
         runtimeMode = cachedSequence[nextIndex];
         currentMode = runtimeMode;
-
-        var logger = FindObjectOfType<ExperimentSaveData_JSON>();
-        if (logger != null)
-        {
-            logger.OnModeChanged(currentMode.ToString());
-        }
 
         ApplyMode();
 
@@ -145,29 +149,56 @@ public class ModeSwitch : MonoBehaviour
         if (slippingScript == null)
         {
             Debug.LogWarning("Bind Slipping script in Inspector | 请在 Inspector 中正确绑定！");
+        }
+        else
+        {
+            switch (runtimeMode)
+            {
+                case ExperimentMode.Visual:
+                    slippingScript.enabled = false;
+                    break;
+
+                case ExperimentMode.Haptic:
+                    slippingScript.enabled = true;
+                    break;
+
+                case ExperimentMode.VisualHaptic:
+                    slippingScript.enabled = true;
+                    break;
+            }
+        }
+
+        // 只在 Haptic 模式下检查可见性
+        if (runtimeMode == ExperimentMode.Haptic)
+        {
+            UpdateHapticCylinderVisibility();
+        }
+    }
+
+    // NEW：Haptic 模式下根据是否在 threshold 内，控制圆柱体 Renderer 开关
+    private void UpdateHapticCylinderVisibility()
+    {
+        if (thresholdCollider == null || cylinderCollider == null || cylinderRenderer == null)
+        {
+            if (!hapticVisibilityRefsWarned)
+            {
+                Debug.LogWarning("Haptic visibility refs missing: 请在 Inspector 绑定 thresholdCollider、cylinderCollider、cylinderRenderer。");
+                hapticVisibilityRefsWarned = true;
+            }
             return;
         }
 
-        switch (runtimeMode)
-        {
-            case ExperimentMode.Visual:
-                slippingScript.enabled = false;
-                break;
+        // 判断是否“在阈值区内”：用包围盒相交作为稳定近似（足够满足‘离开/回到’判断）
+        bool inside = thresholdCollider.bounds.Intersects(cylinderCollider.bounds);
 
-            case ExperimentMode.Haptic:
-                slippingScript.enabled = true;
-                break;
-
-            case ExperimentMode.VisualHaptic:
-                slippingScript.enabled = true;
-                break;
-        }
+        // 在 Haptic 模式下：离开则隐藏，回到则显示
+        cylinderRenderer.enabled = inside;
     }
 
 #if UNITY_EDITOR
     private void OnValidate()
     {
-        if (!Application.isPlaying)
+        if (!Application.isPlaying) // NOTE: UnityEditor 中大小写正确：isPlaying
         {
             if (TryGetSequenceByParticipant(participantID, out var seq))
             {
