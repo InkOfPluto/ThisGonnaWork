@@ -83,7 +83,7 @@ public class Grasp_HandTracking : MonoBehaviour
 
     private float normalizedCache = 0f;
 
-    // ★ 新增：超出尝试 UI/音频/渲染器控制
+    // ★ 超出尝试 UI/音频/渲染器控制
     [Header("OutOfAttempt 资源 | UI & Audio")]
     [Tooltip("超出尝试时显示的 UI 文本/图片容器")]
     public GameObject outOfAttemptUI;          // 赋值：你的“OutOfAttempt”UI 物体
@@ -98,8 +98,16 @@ public class Grasp_HandTracking : MonoBehaviour
     [Header("CoM 控制器（用于切换质心）")]
     public CenterOfMassController comController;  // 赋值：场景里的 CenterOfMassController
 
-    // ★ 防止重复触发
+    // 防止重复触发
     private bool outOfAttemptRoutineRunning = false;
+
+    // ★ 新增：与 ThresholdReopener 的联动
+    [Header("ThresholdReopener Hook")]
+    public ThresholdReopener thresholdReopener;
+
+    // 达到上限后等待 OnCylinderLow 再触发的武装标志
+    [SerializeField, ReadOnly]
+    private bool outOfAttemptArmed = false;
     #endregion
 
     #region Unity 生命周期
@@ -107,12 +115,18 @@ public class Grasp_HandTracking : MonoBehaviour
     {
         CylinderTableContact.OnCylinderTouchTable += HandleCylinderTouchTable;
         CylinderTableContact.OnCylinderLeaveTable += HandleCylinderLeaveTable;
+
+        if (thresholdReopener != null)
+            thresholdReopener.OnCylinderLow += HandleCylinderLowForOutOfAttempt;
     }
 
     void OnDisable()
     {
         CylinderTableContact.OnCylinderTouchTable -= HandleCylinderTouchTable;
         CylinderTableContact.OnCylinderLeaveTable -= HandleCylinderLeaveTable;
+
+        if (thresholdReopener != null)
+            thresholdReopener.OnCylinderLow -= HandleCylinderLowForOutOfAttempt;
     }
 
     void Start()
@@ -209,12 +223,12 @@ public class Grasp_HandTracking : MonoBehaviour
         // —— Closing 边沿 —— //
         if (currentState == GripState.Closing && prevGripState != GripState.Closing)
         {
-            // ★ 若已达到上限，阻止正常抓取流程，触发 OutOfAttempt
+            // 已达到上限：此处不触发协程，仅阻止正常抓取流程，并武装等待 OnCylinderLow
             if (attempt >= attemptLimit)
             {
-                TryTriggerOutOfAttempt();     // 不进入武装态，不切到闭合模式
-                prevGripState = currentState; // 更新前态，避免重复触发
-                return;
+                outOfAttemptArmed = true;           // 标记等待 OnCylinderLow
+                prevGripState = currentState;       // 更新前态，避免重复触发
+                return;                              // 不进入闭合模式
             }
 
             // 正常流程：进入武装态，等待离桌计数
@@ -369,12 +383,28 @@ public class Grasp_HandTracking : MonoBehaviour
         {
             attempt++;
             closeArmed = false;
-            // Debug.Log($"[Grasp_HandTracking] Attempt +1 => {attempt}");
+
+            // 刚好达到上限时，武装等待 OnCylinderLow
+            if (attempt == attemptLimit)
+            {
+                outOfAttemptArmed = true;
+                // Debug.Log("[Grasp_HandTracking] Attempt reached limit; armed for OnCylinderLow.");
+            }
         }
     }
     #endregion
 
-    #region OutOfAttempt：第11次抓取拦截与处理（★新增）
+    #region OutOfAttempt：通过 OnCylinderLow 触发（★修改后）
+    // 收到 ThresholdReopener 的 OnCylinderLow 才真正触发超限流程
+    private void HandleCylinderLowForOutOfAttempt()
+    {
+        if (!outOfAttemptArmed) return;
+        if (outOfAttemptRoutineRunning) return;
+
+        outOfAttemptArmed = false; // 解除武装
+        TryTriggerOutOfAttempt();
+    }
+
     private void TryTriggerOutOfAttempt()
     {
         if (outOfAttemptRoutineRunning) return;
@@ -385,7 +415,7 @@ public class Grasp_HandTracking : MonoBehaviour
     {
         outOfAttemptRoutineRunning = true;
 
-        // 1) 暂停 attempt 计数，防止 3 秒内发生额外事件
+        // 1) 暂停 attempt 计数，防止 3~5 秒内发生额外事件
         StopAttemptCounting();
 
         // 2) 显示 UI
@@ -407,8 +437,8 @@ public class Grasp_HandTracking : MonoBehaviour
         // 4) 隐藏渲染器（圆柱体 + 五个 Cube）
         ToggleRenderers(false);
 
-        // 5) 等待 5 秒
-        yield return new WaitForSeconds(5f);
+        // 5) 等待 3 秒
+        yield return new WaitForSeconds(3f);
 
         // 6) 关闭 UI
         if (outOfAttemptUI) outOfAttemptUI.SetActive(false);
@@ -453,6 +483,7 @@ public class Grasp_HandTracking : MonoBehaviour
         hasClosed = false;
         closeArmed = false;
         boostActive = false;
+        outOfAttemptArmed = false;   // 清理武装标志
         SwitchToOpenMode();
     }
 

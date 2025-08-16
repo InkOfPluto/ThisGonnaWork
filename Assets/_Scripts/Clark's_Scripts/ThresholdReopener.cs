@@ -1,5 +1,6 @@
 // ThresholdReopener.cs
 using UnityEngine;
+using System;   // for Action
 
 public class ThresholdReopener : MonoBehaviour
 {
@@ -13,6 +14,9 @@ public class ThresholdReopener : MonoBehaviour
     [Header("Settings")]
     [Tooltip("当 Cylinder 的世界坐标 Y < reopenHeight 时，重新打开 Threshold")]
     public float reopenHeight = 0.775f;
+
+    // 事件：当 Cylinder 高度低于 reopenHeight 时触发
+    public event Action OnCylinderLow;
 
     // 内部状态：用于识别“刚被关闭”的事件（视为 ThresholdCloser 触发）
     private bool sawCloseEvent = false;
@@ -43,7 +47,11 @@ public class ThresholdReopener : MonoBehaviour
                 threshold.SetActive(true);   // 重新打开 Threshold
                 sawCloseEvent = false;       // 清空，等待下一次 ThresholdCloser 再次触发
                 lastThresholdActive = true;  // 同步状态，避免误判
+
                 Debug.Log($"[ThresholdReopener] Reopened because Cylinder.y={cylinder.position.y:F3} < {reopenHeight}");
+
+                // 触发 OnCylinderLow 事件
+                OnCylinderLow?.Invoke();
             }
         }
     }
