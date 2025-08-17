@@ -13,9 +13,11 @@ using UnityEngine;
 /// - 保存键：6（主键盘/小键盘）；5 清空并重新开始一段
 ///
 /// 本版修改点：
-/// 1) 除 Follow/UpDown/SlippingOneFinger 继续按脚本 Behaviour.enabled 记录外，
-///    其余原“*_Beh”改为 GameObject，并按 GameObject.activeInHierarchy 记录激活/失活与 on/off 时间。
-/// 2) 其它逻辑保持不变。
+/// 1) Follow/UpDown/SlippingOneFinger 继续按 Behaviour.enabled 记录；
+/// 2) Cylinder、CubeCenter 和五个 FingerCubes 按 GameObject.activeInHierarchy 记录，并对它们进行真正“边沿检测”，每次 on/off 都刷新 last_on/last_off；
+/// 3) 阈值（Threshold）与 Goal 的进入/离开采用边沿检测（每次进入/离开都更新）；Goal 结果事件为“脉冲”，当帧为 true，随后复位；
+/// 4) OutOfAttempt 以脉冲+时间戳记录（保持不变）；
+/// 5) ★ 新增：记录 grasp_state 更改的时间戳。
 /// </summary>
 public class UnifiedDataLogger : MonoBehaviour
 {
@@ -52,7 +54,7 @@ public class UnifiedDataLogger : MonoBehaviour
     public Behaviour followHandTracking;     // Follow_HandTracking（依旧按脚本 enabled）
     public Behaviour updownHandTracking;     // UpDown_HandTracking（依旧按脚本 enabled）
 
-    // —— 以下改为 GameObject：按 activeInHierarchy 记录 ——
+    // —— 以下按 GameObject.activeInHierarchy 记录 —— 
     public GameObject fingerDA_Obj;
     public GameObject fingerSHI_Obj;
     public GameObject fingerZHONG_Obj;
@@ -76,7 +78,10 @@ public class UnifiedDataLogger : MonoBehaviour
 
         public List<int> attempt_index = new();
         public List<float> attempt_enter_time = new();
+
         public List<string> grasp_state = new();
+        // ★ 新增：每帧记录“最近一次 grasp_state 发生变化”的时间戳
+        public List<float> grasp_state_change_time = new();
 
         // VisualDisplay
         public List<float> DistanceDA = new();
@@ -131,22 +136,25 @@ public class UnifiedDataLogger : MonoBehaviour
         public List<float> FingerSHI_angle_rel_cylinder = new();
 
         public List<bool> FingerZHONG_enabled = new(); public List<float> FingerZHONG_last_on_time = new(); public List<float> FingerZHONG_last_off_time = new();
-        public List<float> FingerZHONG_world_pos_x = new(); public List<float> FingerZHONG_world_pos_y = new(); public List<float> FingerZHONG_world_pos_z = new();
-        public List<float> FingerZHONG_world_euler_x = new(); public List<float> FingerZHONG_world_euler_y = new(); public List<float> FingerZHONG_world_euler_z = new();
-        public List<float> FingerZHONG_pos_rel_cylinder_x = new(); public List<float> FingerZHONG_pos_rel_cylinder_y = new(); public List<float> FingerZHONG_pos_rel_cylinder_z = new();
-        public List<float> FingerZHONG_angle_rel_cylinder = new();
+        public List<float> FingerZHONG_world_pos_x = new(); public List<float> FingerZHONG_world_pos_y = new();
+        public List<float> FingerZHONG_world_pos_z = new(); public List<float> FingerZHONG_world_euler_x = new();
+        public List<float> FingerZHONG_world_euler_y = new(); public List<float> FingerZHONG_world_euler_z = new();
+        public List<float> FingerZHONG_pos_rel_cylinder_x = new(); public List<float> FingerZHONG_pos_rel_cylinder_y = new();
+        public List<float> FingerZHONG_pos_rel_cylinder_z = new(); public List<float> FingerZHONG_angle_rel_cylinder = new();
 
         public List<bool> FingerWU_enabled = new(); public List<float> FingerWU_last_on_time = new(); public List<float> FingerWU_last_off_time = new();
-        public List<float> FingerWU_world_pos_x = new(); public List<float> FingerWU_world_pos_y = new(); public List<float> FingerWU_world_pos_z = new();
-        public List<float> FingerWU_world_euler_x = new(); public List<float> FingerWU_world_euler_y = new(); public List<float> FingerWU_world_euler_z = new();
-        public List<float> FingerWU_pos_rel_cylinder_x = new(); public List<float> FingerWU_pos_rel_cylinder_y = new(); public List<float> FingerWU_pos_rel_cylinder_z = new();
-        public List<float> FingerWU_angle_rel_cylinder = new();
+        public List<float> FingerWU_world_pos_x = new(); public List<float> FingerWU_world_pos_y = new();
+        public List<float> FingerWU_world_pos_z = new(); public List<float> FingerWU_world_euler_x = new();
+        public List<float> FingerWU_world_euler_y = new(); public List<float> FingerWU_world_euler_z = new();
+        public List<float> FingerWU_pos_rel_cylinder_x = new(); public List<float> FingerWU_pos_rel_cylinder_y = new();
+        public List<float> FingerWU_pos_rel_cylinder_z = new(); public List<float> FingerWU_angle_rel_cylinder = new();
 
         public List<bool> FingerXIAO_enabled = new(); public List<float> FingerXIAO_last_on_time = new(); public List<float> FingerXIAO_last_off_time = new();
-        public List<float> FingerXIAO_world_pos_x = new(); public List<float> FingerXIAO_world_pos_y = new(); public List<float> FingerXIAO_world_pos_z = new();
-        public List<float> FingerXIAO_world_euler_x = new(); public List<float> FingerXIAO_world_euler_y = new(); public List<float> FingerXIAO_world_euler_z = new();
-        public List<float> FingerXIAO_pos_rel_cylinder_x = new(); public List<float> FingerXIAO_pos_rel_cylinder_y = new(); public List<float> FingerXIAO_pos_rel_cylinder_z = new();
-        public List<float> FingerXIAO_angle_rel_cylinder = new();
+        public List<float> FingerXIAO_world_pos_x = new(); public List<float> FingerXIAO_world_pos_y = new();
+        public List<float> FingerXIAO_world_pos_z = new(); public List<float> FingerXIAO_world_euler_x = new();
+        public List<float> FingerXIAO_world_euler_y = new(); public List<float> FingerXIAO_world_euler_z = new();
+        public List<float> FingerXIAO_pos_rel_cylinder_x = new(); public List<float> FingerXIAO_pos_rel_cylinder_y = new();
+        public List<float> FingerXIAO_pos_rel_cylinder_z = new(); public List<float> FingerXIAO_angle_rel_cylinder = new();
 
         // HandCenter（世界）
         public List<float> HandCenter_world_pos_x = new(); public List<float> HandCenter_world_pos_y = new(); public List<float> HandCenter_world_pos_z = new();
@@ -190,11 +198,15 @@ public class UnifiedDataLogger : MonoBehaviour
         public List<bool> Cylinder_on_table = new(); public List<float> Cylinder_touch_time = new(); public List<float> Cylinder_leave_time = new();
         public List<bool> Cylinder_in_threshold = new(); public List<float> Threshold_last_enter_time = new(); public List<float> Threshold_last_exit_time = new();
 
-        // Goal 区域与事件
+        // Goal 区域与事件（结果事件为脉冲）
         public List<bool> Goal_above = new(); public List<float> Goal_enter_time = new(); public List<float> Goal_leave_time = new();
         public List<bool> Goal_OnHoldSucceeded = new(); public List<float> Goal_OnHoldSucceeded_time = new();
         public List<bool> Goal_OnHoldInterrupted = new(); public List<float> Goal_OnHoldInterrupted_time = new();
         public List<bool> Goal_OnHoldFailedTilt = new(); public List<float> Goal_OnHoldFailedTilt_time = new();
+
+        // OutOfAttempt（脉冲）
+        public List<bool> OutOfAttempt_trigger = new();
+        public List<float> OutOfAttempt_time = new();
 
         // 采样完整性（调试用）
         public List<int> sample_ok = new();
@@ -205,21 +217,38 @@ public class UnifiedDataLogger : MonoBehaviour
     private float startTime;
     private float lastModeEnter = 0f, lastComEnter = 0f, lastAttemptEnter = 0f;
 
-    // 边沿检测：记录开关的 last on/off 时间
+    // 边沿检测：记录开关的 last on/off 时间（脚本）
     private float lastSlipOn = -1f, lastSlipOff = -1f;
     private float lastFollowOn = -1f, lastFollowOff = -1f, lastUpDownOn = -1f, lastUpDownOff = -1f;
+
+    // Cylinder / CubeCenter（GameObject）
     private float lastCylOn = -1f, lastCylOff = -1f, lastCubeOn = -1f, lastCubeOff = -1f;
-    private bool prevFollow = false, prevUpDown = false, prevSlip = false, prevCyl = false, prevCube = false;
+    private bool prevCyl = false, prevCube = false;
+
+    // 五个 FingerCube（GameObject）
+    private bool prevFingerDA = false, prevFingerSHI = false, prevFingerZHONG = false, prevFingerWU = false, prevFingerXIAO = false;
+    private float lastFingerDAOn = -1f, lastFingerDAOff = -1f;
+    private float lastFingerSHIOn = -1f, lastFingerSHIOff = -1f;
+    private float lastFingerZHONGOn = -1f, lastFingerZHONGOff = -1f;
+    private float lastFingerWUOn = -1f, lastFingerWUOff = -1f;
+    private float lastFingerXIAOOn = -1f, lastFingerXIAOOff = -1f;
+
+    // Follow/UpDown/Slipping（脚本）
+    private bool prevFollow = false, prevUpDown = false, prevSlip = false;
 
     // 桌面接触
     private bool cylinderOnTable = false; private float lastTouchTable = -1f, lastLeaveTable = -1f;
 
-    // Threshold 进入/离开时间（边沿近似）
+    // Threshold 进入/离开（多次边沿）
     private float lastThreshEnter = -1f, lastThreshExit = -1f;
+    private bool prevInThreshold = false;
 
-    // Goal 区域与事件
+    // Goal 区域进入/离开（多次边沿）
     private float lastGoalEnter = -1f, lastGoalLeave = -1f;
-    private bool goalSucceeded = false, goalInterrupted = false, goalFailedTilt = false;
+    private bool prevGoalAbove = false;
+
+    // Goal 结果事件（脉冲）
+    private bool goalSucceededPulse = false, goalInterruptedPulse = false, goalFailedTiltPulse = false;
     private float lastGoalSucceeded = -1f, lastGoalInterrupted = -1f, lastGoalFailedTilt = -1f;
 
     private string prevModeStr = "";
@@ -227,13 +256,22 @@ public class UnifiedDataLogger : MonoBehaviour
 
     private int fileIndex = 0;
 
+    // OutOfAttempt 状态
+    private bool outOfAttemptPulse = false;
+    private float lastOutOfAttemptTime = -1f;
+    private bool reachedAttemptLimit = false;
+
+    // ★ 新增：grasp_state 更改时间戳跟踪
+    private string prevGraspStateStr = "";
+    private float lastGraspStateChange = -1f;
+
     private void OnEnable()
     {
-        // 圆柱体-桌面接触（静态事件）
+        // 圆柱体-桌面接触
         CylinderTableContact.OnCylinderTouchTable += HandleTouchTable;
         CylinderTableContact.OnCylinderLeaveTable += HandleLeaveTable;
 
-        // Goal 事件
+        // Goal 事件（脉冲）
         if (goal != null)
         {
             goal.OnHoldSucceeded += OnGoalSucceeded;
@@ -278,12 +316,19 @@ public class UnifiedDataLogger : MonoBehaviour
         float t = Now();
         bool ok = true;
 
-        // 监视开关边沿：
-        EdgeWatch(ref prevFollow, followHandTracking, ref lastFollowOn, ref lastFollowOff, t);        // 脚本 enabled
-        EdgeWatch(ref prevUpDown, updownHandTracking, ref lastUpDownOn, ref lastUpDownOff, t);        // 脚本 enabled
-        EdgeWatch(ref prevSlip, slipping, ref lastSlipOn, ref lastSlipOff, t);                        // 脚本 enabled
-        EdgeWatch(ref prevCyl, cylinder_Obj, ref lastCylOn, ref lastCylOff, t);                       // 物体 active
-        EdgeWatch(ref prevCube, cubeCenter_Obj, ref lastCubeOn, ref lastCubeOff, t);                  // 物体 active
+        // 行为脚本（Behaviour.enabled）边沿
+        EdgeWatch(ref prevFollow, followHandTracking, ref lastFollowOn, ref lastFollowOff, t);
+        EdgeWatch(ref prevUpDown, updownHandTracking, ref lastUpDownOn, ref lastUpDownOff, t);
+        EdgeWatch(ref prevSlip, slipping, ref lastSlipOn, ref lastSlipOff, t);
+
+        // GameObject（activeInHierarchy）边沿：Cylinder / CubeCenter / 五指方块
+        EdgeWatch(ref prevCyl, cylinder_Obj, ref lastCylOn, ref lastCylOff, t);
+        EdgeWatch(ref prevCube, cubeCenter_Obj, ref lastCubeOn, ref lastCubeOff, t);
+        EdgeWatch(ref prevFingerDA, fingerDA_Obj, ref lastFingerDAOn, ref lastFingerDAOff, t);
+        EdgeWatch(ref prevFingerSHI, fingerSHI_Obj, ref lastFingerSHIOn, ref lastFingerSHIOff, t);
+        EdgeWatch(ref prevFingerZHONG, fingerZHONG_Obj, ref lastFingerZHONGOn, ref lastFingerZHONGOff, t);
+        EdgeWatch(ref prevFingerWU, fingerWU_Obj, ref lastFingerWUOn, ref lastFingerWUOff, t);
+        EdgeWatch(ref prevFingerXIAO, fingerXIAO_Obj, ref lastFingerXIAOOn, ref lastFingerXIAOOff, t);
 
         // 基本时间与元信息
         D.time.Add(t);
@@ -302,7 +347,41 @@ public class UnifiedDataLogger : MonoBehaviour
         int attempt = (graspHT != null) ? graspHT.AttemptCount : -1;
         D.attempt_index.Add(attempt);
         D.attempt_enter_time.Add(lastAttemptEnter);
-        D.grasp_state.Add(GetGraspState(graspHT));
+
+        // —— 抓握状态 + ★ 边沿时间戳 —— //
+        string gs = GetGraspState(graspHT);
+        if (gs != prevGraspStateStr)
+        {
+            lastGraspStateChange = t;         // ★ 记录本次状态改变的时刻
+            prevGraspStateStr = gs;           // ★ 更新前态
+        }
+        D.grasp_state.Add(gs);
+        D.grasp_state_change_time.Add(lastGraspStateChange); // ★ 每帧写入“最近一次变更时间”
+
+        // —— OutOfAttempt 侦测与记录（保持不变）——
+        int limit = (graspHT != null) ? graspHT.attemptLimit : int.MaxValue;
+
+        // 达到/超过上限 → 进入“武装态”
+        if (!reachedAttemptLimit && attempt >= 0 && limit != int.MaxValue && attempt >= limit)
+        {
+            reachedAttemptLimit = true;
+        }
+
+        // 两种“真正触发”条件（择一）：
+        bool comChangedThisFrame = (comIdx != prevCom && prevCom != int.MinValue);
+        bool attemptResetFromLimit = (prevAttempt >= limit && attempt >= 0 && attempt <= 1);
+
+        if (reachedAttemptLimit && (comChangedThisFrame || attemptResetFromLimit))
+        {
+            outOfAttemptPulse = true;
+            lastOutOfAttemptTime = t;
+            reachedAttemptLimit = false; // 解除武装
+        }
+
+        // 写入 OutOfAttempt 脉冲与时间戳
+        D.OutOfAttempt_trigger.Add(outOfAttemptPulse);
+        D.OutOfAttempt_time.Add(lastOutOfAttemptTime);
+        outOfAttemptPulse = false;
 
         // VisualDisplay
         if (visual != null)
@@ -349,14 +428,15 @@ public class UnifiedDataLogger : MonoBehaviour
         PushRelPos(cubeCenter, cylinder, D.CubeCenter_pos_rel_cylinder_x, D.CubeCenter_pos_rel_cylinder_y, D.CubeCenter_pos_rel_cylinder_z);
         D.CubeCenter_angle_rel_cylinder.Add(AngleXZ(cubeCenter, cylinder));
 
-        // 五指可视化 CUBEs（enabled 改为按 GameObject.activeInHierarchy；last_on/off 沿用旧逻辑：写 -1）
+        // 五指可视化 CUBEs（现在也用真正边沿 last_on/off）
         PushFingerBlockGO(
             fingerDA_Obj, fingerDA,
             D.FingerDA_enabled, D.FingerDA_last_on_time, D.FingerDA_last_off_time,
             D.FingerDA_world_pos_x, D.FingerDA_world_pos_y, D.FingerDA_world_pos_z,
             D.FingerDA_world_euler_x, D.FingerDA_world_euler_y, D.FingerDA_world_euler_z,
             D.FingerDA_pos_rel_cylinder_x, D.FingerDA_pos_rel_cylinder_y, D.FingerDA_pos_rel_cylinder_z,
-            D.FingerDA_angle_rel_cylinder
+            D.FingerDA_angle_rel_cylinder,
+            lastFingerDAOn, lastFingerDAOff
         );
         PushFingerBlockGO(
             fingerSHI_Obj, fingerSHI,
@@ -364,7 +444,8 @@ public class UnifiedDataLogger : MonoBehaviour
             D.FingerSHI_world_pos_x, D.FingerSHI_world_pos_y, D.FingerSHI_world_pos_z,
             D.FingerSHI_world_euler_x, D.FingerSHI_world_euler_y, D.FingerSHI_world_euler_z,
             D.FingerSHI_pos_rel_cylinder_x, D.FingerSHI_pos_rel_cylinder_y, D.FingerSHI_pos_rel_cylinder_z,
-            D.FingerSHI_angle_rel_cylinder
+            D.FingerSHI_angle_rel_cylinder,
+            lastFingerSHIOn, lastFingerSHIOff
         );
         PushFingerBlockGO(
             fingerZHONG_Obj, fingerZHONG,
@@ -372,7 +453,8 @@ public class UnifiedDataLogger : MonoBehaviour
             D.FingerZHONG_world_pos_x, D.FingerZHONG_world_pos_y, D.FingerZHONG_world_pos_z,
             D.FingerZHONG_world_euler_x, D.FingerZHONG_world_euler_y, D.FingerZHONG_world_euler_z,
             D.FingerZHONG_pos_rel_cylinder_x, D.FingerZHONG_pos_rel_cylinder_y, D.FingerZHONG_pos_rel_cylinder_z,
-            D.FingerZHONG_angle_rel_cylinder
+            D.FingerZHONG_angle_rel_cylinder,
+            lastFingerZHONGOn, lastFingerZHONGOff
         );
         PushFingerBlockGO(
             fingerWU_Obj, fingerWU,
@@ -380,7 +462,8 @@ public class UnifiedDataLogger : MonoBehaviour
             D.FingerWU_world_pos_x, D.FingerWU_world_pos_y, D.FingerWU_world_pos_z,
             D.FingerWU_world_euler_x, D.FingerWU_world_euler_y, D.FingerWU_world_euler_z,
             D.FingerWU_pos_rel_cylinder_x, D.FingerWU_pos_rel_cylinder_y, D.FingerWU_pos_rel_cylinder_z,
-            D.FingerWU_angle_rel_cylinder
+            D.FingerWU_angle_rel_cylinder,
+            lastFingerWUOn, lastFingerWUOff
         );
         PushFingerBlockGO(
             fingerXIAO_Obj, fingerXIAO,
@@ -388,7 +471,8 @@ public class UnifiedDataLogger : MonoBehaviour
             D.FingerXIAO_world_pos_x, D.FingerXIAO_world_pos_y, D.FingerXIAO_world_pos_z,
             D.FingerXIAO_world_euler_x, D.FingerXIAO_world_euler_y, D.FingerXIAO_world_euler_z,
             D.FingerXIAO_pos_rel_cylinder_x, D.FingerXIAO_pos_rel_cylinder_y, D.FingerXIAO_pos_rel_cylinder_z,
-            D.FingerXIAO_angle_rel_cylinder
+            D.FingerXIAO_angle_rel_cylinder,
+            lastFingerXIAOOn, lastFingerXIAOOff
         );
 
         // HandCenter（世界）
@@ -449,39 +533,57 @@ public class UnifiedDataLogger : MonoBehaviour
         D.UpDown_last_on_time.Add(lastUpDownOn);
         D.UpDown_last_off_time.Add(lastUpDownOff);
 
-        // 桌面接触 & Threshold
+        // 桌面接触
         D.Cylinder_on_table.Add(cylinderOnTable);
         D.Cylinder_touch_time.Add(lastTouchTable);
         D.Cylinder_leave_time.Add(lastLeaveTable);
 
-        bool inThresh = IsInThreshold();
+        // —— 阈值边沿检测（每次进入/离开都更新时间）——
+        bool inThresh = GetThresholdInside();
+        if (inThresh != prevInThreshold)
+        {
+            if (inThresh) lastThreshEnter = t;
+            else lastThreshExit = t;
+            prevInThreshold = inThresh;
+        }
         D.Cylinder_in_threshold.Add(inThresh);
         D.Threshold_last_enter_time.Add(lastThreshEnter);
         D.Threshold_last_exit_time.Add(lastThreshExit);
 
-        // Goal 区域与事件
+        // —— Goal 区域 above 的进入/离开边沿（每次都记录）——
         bool above = (goal != null) ? goal.isCylinderAboveAndClear : false;
+        if (above != prevGoalAbove)
+        {
+            if (above) lastGoalEnter = t;
+            else lastGoalLeave = t;
+            prevGoalAbove = above;
+        }
         D.Goal_above.Add(above);
         D.Goal_enter_time.Add(lastGoalEnter);
         D.Goal_leave_time.Add(lastGoalLeave);
-        D.Goal_OnHoldSucceeded.Add(goalSucceeded); D.Goal_OnHoldSucceeded_time.Add(lastGoalSucceeded);
-        D.Goal_OnHoldInterrupted.Add(goalInterrupted); D.Goal_OnHoldInterrupted_time.Add(lastGoalInterrupted);
-        D.Goal_OnHoldFailedTilt.Add(goalFailedTilt); D.Goal_OnHoldFailedTilt_time.Add(lastGoalFailedTilt);
+
+        // —— Goal 结果事件（脉冲：当帧为 true，随后复位）——
+        D.Goal_OnHoldSucceeded.Add(goalSucceededPulse); D.Goal_OnHoldSucceeded_time.Add(lastGoalSucceeded);
+        D.Goal_OnHoldInterrupted.Add(goalInterruptedPulse); D.Goal_OnHoldInterrupted_time.Add(lastGoalInterrupted);
+        D.Goal_OnHoldFailedTilt.Add(goalFailedTiltPulse); D.Goal_OnHoldFailedTilt_time.Add(lastGoalFailedTilt);
+        goalSucceededPulse = goalInterruptedPulse = goalFailedTiltPulse = false;
 
         D.sample_ok.Add(ok ? 1 : 0);
 
-        // 进入时间的更新（模式/COM/attempt 变化边沿）
+        // 模式/COM/attempt 变化进入时间
         TrackModeComAttemptEnterTimes();
     }
 
     // ―― 事件回调 ―― //
     private void HandleTouchTable() { cylinderOnTable = true; lastTouchTable = Now(); }
     private void HandleLeaveTable() { cylinderOnTable = false; lastLeaveTable = Now(); }
-    private void OnGoalSucceeded(float tHold) { goalSucceeded = true; lastGoalSucceeded = Now(); }
-    private void OnGoalInterrupted(float tHold) { goalInterrupted = true; lastGoalInterrupted = Now(); }
-    private void OnGoalFailedTilt(float tHold, float tiltDeg) { goalFailedTilt = true; lastGoalFailedTilt = Now(); }
 
-    // ―― 状态/进入时间跟踪 ―― //
+    // Goal 结果事件：设置脉冲并更新时间戳
+    private void OnGoalSucceeded(float tHold) { goalSucceededPulse = true; lastGoalSucceeded = Now(); }
+    private void OnGoalInterrupted(float tHold) { goalInterruptedPulse = true; lastGoalInterrupted = Now(); }
+    private void OnGoalFailedTilt(float tHold, float tiltDeg) { goalFailedTiltPulse = true; lastGoalFailedTilt = Now(); }
+
+    // ―― 状态/进入时间跟踪（模式/COM/attempt）―― //
     private void TrackModeComAttemptEnterTimes()
     {
         string modeNow = (modeSwitch != null) ? modeSwitch.currentMode.ToString() : "";
@@ -492,11 +594,6 @@ public class UnifiedDataLogger : MonoBehaviour
 
         int attemptNow = (graspHT != null) ? graspHT.AttemptCount : int.MinValue;
         if (attemptNow != prevAttempt) { lastAttemptEnter = Now(); prevAttempt = attemptNow; }
-
-        // Goal 区域进入/离开粗略边沿
-        bool above = (goal != null) ? goal.isCylinderAboveAndClear : false;
-        if (above && lastGoalEnter < 0f) lastGoalEnter = Now();
-        if (!above && lastGoalLeave < 0f) lastGoalLeave = Now();
     }
 
     // ―― 保存 ―― //
@@ -530,18 +627,34 @@ public class UnifiedDataLogger : MonoBehaviour
     {
         startTime = Time.time;
 
-        // 初始化 enabled/active 状态与时间基线
+        // 初始化脚本 enabled 的前态
         prevFollow = followHandTracking != null && followHandTracking.enabled;
         prevUpDown = updownHandTracking != null && updownHandTracking.enabled;
         prevSlip = slipping != null && slipping.enabled;
-        prevCyl = cylinder_Obj != null && cylinder_Obj.activeInHierarchy;
-        prevCube = cubeCenter_Obj != null && cubeCenter_Obj.activeInHierarchy;
 
         lastFollowOn = prevFollow ? 0f : -1f; lastFollowOff = prevFollow ? -1f : 0f;
         lastUpDownOn = prevUpDown ? 0f : -1f; lastUpDownOff = prevUpDown ? -1f : 0f;
         lastSlipOn = prevSlip ? 0f : -1f; lastSlipOff = prevSlip ? -1f : 0f;
+
+        // 初始化 GameObject active 的前态：Cylinder / CubeCenter / 五指方块
+        prevCyl = cylinder_Obj != null && cylinder_Obj.activeInHierarchy;
+        prevCube = cubeCenter_Obj != null && cubeCenter_Obj.activeInHierarchy;
+
+        prevFingerDA = fingerDA_Obj != null && fingerDA_Obj.activeInHierarchy;
+        prevFingerSHI = fingerSHI_Obj != null && fingerSHI_Obj.activeInHierarchy;
+        prevFingerZHONG = fingerZHONG_Obj != null && fingerZHONG_Obj.activeInHierarchy;
+        prevFingerWU = fingerWU_Obj != null && fingerWU_Obj.activeInHierarchy;
+        prevFingerXIAO = fingerXIAO_Obj != null && fingerXIAO_Obj.activeInHierarchy;
+
+        // 基于初始状态设定 last_on/off（on→last_on=0；off→last_off=0）
         lastCylOn = prevCyl ? 0f : -1f; lastCylOff = prevCyl ? -1f : 0f;
         lastCubeOn = prevCube ? 0f : -1f; lastCubeOff = prevCube ? -1f : 0f;
+
+        lastFingerDAOn = prevFingerDA ? 0f : -1f; lastFingerDAOff = prevFingerDA ? -1f : 0f;
+        lastFingerSHIOn = prevFingerSHI ? 0f : -1f; lastFingerSHIOff = prevFingerSHI ? -1f : 0f;
+        lastFingerZHONGOn = prevFingerZHONG ? 0f : -1f; lastFingerZHONGOff = prevFingerZHONG ? -1f : 0f;
+        lastFingerWUOn = prevFingerWU ? 0f : -1f; lastFingerWUOff = prevFingerWU ? -1f : 0f;
+        lastFingerXIAOOn = prevFingerXIAO ? 0f : -1f; lastFingerXIAOOff = prevFingerXIAO ? -1f : 0f;
 
         lastModeEnter = 0f; lastComEnter = 0f; lastAttemptEnter = 0f;
 
@@ -551,10 +664,26 @@ public class UnifiedDataLogger : MonoBehaviour
 
         // 状态清零
         cylinderOnTable = false; lastTouchTable = -1f; lastLeaveTable = -1f;
+
+        // 初始化 Threshold/Goal 的前一帧状态
+        prevInThreshold = GetThresholdInside();
         lastThreshEnter = -1f; lastThreshExit = -1f;
+
+        prevGoalAbove = (goal != null) ? goal.isCylinderAboveAndClear : false;
         lastGoalEnter = -1f; lastGoalLeave = -1f;
-        goalSucceeded = goalInterrupted = goalFailedTilt = false;
+
+        // 结果事件脉冲复位
+        goalSucceededPulse = goalInterruptedPulse = goalFailedTiltPulse = false;
         lastGoalSucceeded = lastGoalInterrupted = lastGoalFailedTilt = -1f;
+
+        // OutOfAttempt 初始化
+        outOfAttemptPulse = false;
+        lastOutOfAttemptTime = -1f;
+        reachedAttemptLimit = false;
+
+        // ★ 初始化 grasp_state 变更追踪
+        prevGraspStateStr = GetGraspState(graspHT);
+        lastGraspStateChange = 0f;   // 段开始视作“基线时间”
     }
 
     private void ClearDataForNextSegment()
@@ -631,19 +760,20 @@ public class UnifiedDataLogger : MonoBehaviour
         return Mathf.Atan2(v.z, v.x) * Mathf.Rad2Deg; // 以 X 轴为 0°
     }
 
-    // 指尖可视化 Cube：按 GameObject.activeInHierarchy；last_on/off 维持 -1（和旧版一致）
+    // 指尖可视化 Cube：按 GameObject.activeInHierarchy + 真正边沿 last_on/off
     private void PushFingerBlockGO(
         GameObject go, Transform tr,
         List<bool> en, List<float> ton, List<float> toff,
         List<float> wpos_x, List<float> wpos_y, List<float> wpos_z,
         List<float> weul_x, List<float> weul_y, List<float> weul_z,
         List<float> rel_x, List<float> rel_y, List<float> rel_z,
-        List<float> ang)
+        List<float> ang,
+        float lastOn, float lastOff)
     {
         bool active = (go != null) && go.activeInHierarchy;
         en.Add(active);
-        ton.Add(-1f); // 旧逻辑未做边沿跟踪
-        toff.Add(-1f);
+        ton.Add(lastOn);
+        toff.Add(lastOff);
         PushWorldPose(tr, wpos_x, wpos_y, wpos_z, weul_x, weul_y, weul_z);
         PushRelPos(tr, cylinder, rel_x, rel_y, rel_z);
         ang.Add(AngleXZ(tr, cylinder));
@@ -683,8 +813,8 @@ public class UnifiedDataLogger : MonoBehaviour
         return "Unknown";
     }
 
-    // ―― 阈值区域粗略检测（可选，若没有更好事件）――
-    private bool IsInThreshold()
+    // —— 纯查询阈值内外，不做时间写入（避免重复逻辑）——
+    private bool GetThresholdInside()
     {
         if (thresholdLock == null || cylinder == null) return false;
         var cylCol = cylinder.GetComponent<Collider>();
@@ -692,11 +822,10 @@ public class UnifiedDataLogger : MonoBehaviour
 
         var hits = Physics.OverlapBox(cylCol.bounds.center, cylCol.bounds.extents, cylinder.rotation,
                                       ~0, QueryTriggerInteraction.Collide);
-        bool inside = false;
-        foreach (var h in hits) { if (h.CompareTag("Threshold")) { inside = true; break; } }
-
-        if (inside && lastThreshEnter < 0f) lastThreshEnter = Now();
-        if (!inside && lastThreshExit < 0f) lastThreshExit = Now();
-        return inside;
+        foreach (var h in hits)
+        {
+            if (h.CompareTag("Threshold")) return true;
+        }
+        return false;
     }
 }
