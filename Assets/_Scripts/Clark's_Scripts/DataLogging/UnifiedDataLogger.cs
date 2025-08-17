@@ -1,4 +1,4 @@
-using System;
+ï»¿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading;
@@ -6,59 +6,66 @@ using Newtonsoft.Json;
 using UnityEngine;
 
 /// <summary>
-/// µ¥²ã¼¶¡¢ÖğÖ¡Í³Ò»²ÉÑùÊı¾İ¼ÇÂ¼Æ÷£¨±âÆ½»¯°æ±¾£©£º
-/// - ²»ĞŞ¸ÄÆäËü½Å±¾£¬½öÍ¨¹ı Inspector ÒıÓÃÓëÒÑ¹«¿ªµÄÊôĞÔ/ÊÂ¼ş¶ÁÈ¡
-/// - Ã¿Ö¡²ÉÑù£¬±£Ö¤ËùÓĞ×Ö¶ÎÊı×é³¤¶ÈÒ»ÖÂ£¨È±ÒıÓÃÔò²¹Ä¬ÈÏÖµ£©
-/// - JSON ±âÆ½£¨µ¥²ã×Ö¶ÎÃû ¡ú ÖµÊı×é£¬ËùÓĞ Vector3 ²ğÎª x/y/z ÈıÁĞ£©
-/// - ±£´æ¼ü£ºN£»¿ÉÑ¡ºóÌ¨Ïß³ÌĞ´ÅÌ
+/// å•å±‚çº§ã€é€å¸§ç»Ÿä¸€é‡‡æ ·æ•°æ®è®°å½•å™¨ï¼ˆæ‰å¹³åŒ–ç‰ˆæœ¬ï¼‰
+/// - ä¸ä¿®æ”¹å…¶å®ƒè„šæœ¬ï¼Œä»…é€šè¿‡ Inspector å¼•ç”¨ä¸å·²å…¬å¼€çš„å±æ€§/äº‹ä»¶è¯»å–
+/// - æ¯å¸§é‡‡æ ·ï¼Œä¿è¯æ‰€æœ‰å­—æ®µæ•°ç»„é•¿åº¦ä¸€è‡´ï¼ˆç¼ºå¼•ç”¨åˆ™è¡¥é»˜è®¤å€¼ï¼‰
+/// - JSON æ‰å¹³ï¼ˆå•å±‚å­—æ®µå â†’ å€¼æ•°ç»„ï¼Œæ‰€æœ‰ Vector3 æ‹†ä¸º x/y/z ä¸‰åˆ—ï¼‰
+/// - ä¿å­˜é”®ï¼š6ï¼ˆä¸»é”®ç›˜/å°é”®ç›˜ï¼‰ï¼›5 æ¸…ç©ºå¹¶é‡æ–°å¼€å§‹ä¸€æ®µ
+///
+/// æœ¬ç‰ˆä¿®æ”¹ç‚¹ï¼š
+/// 1) é™¤ Follow/UpDown/SlippingOneFinger ç»§ç»­æŒ‰è„šæœ¬ Behaviour.enabled è®°å½•å¤–ï¼Œ
+///    å…¶ä½™åŸâ€œ*_Behâ€æ”¹ä¸º GameObjectï¼Œå¹¶æŒ‰ GameObject.activeInHierarchy è®°å½•æ¿€æ´»/å¤±æ´»ä¸ on/off æ—¶é—´ã€‚
+/// 2) å…¶å®ƒé€»è¾‘ä¿æŒä¸å˜ã€‚
 /// </summary>
 public class UnifiedDataLogger : MonoBehaviour
 {
-    [Header("±£´æÉèÖÃ")]
-    [Tooltip("±£´æÄ¿Â¼¸ùÂ·¾¶£¨¿ÕÔòÓÃ Application.persistentDataPath£©")]
+    [Header("ä¿å­˜è®¾ç½®")]
+    [Tooltip("ä¿å­˜ç›®å½•æ ¹è·¯å¾„ï¼ˆç©ºåˆ™ç”¨ Application.persistentDataPathï¼‰")]
     public string rootPath = "";
-    [Tooltip("ÊÇ·ñÊ¹ÓÃºóÌ¨Ïß³ÌĞ´ÎÄ¼ş")]
+    [Tooltip("æ˜¯å¦ä½¿ç”¨åå°çº¿ç¨‹å†™æ–‡ä»¶")]
     public bool threadedWrite = true;
-    [Tooltip("ÎÄ¼şÃûÇ°×º")]
+    [Tooltip("æ–‡ä»¶åå‰ç¼€")]
     public string filePrefix = "Session";
 
-    [Header("Íâ²¿½Å±¾Óë¶ÔÏó£¨½öÍÏ×§£¬²»¸ÄËüÃÇ£©")]
-    public ModeSwitch modeSwitch;                     // ²ÎÓëÕß±àºÅ & µ±Ç°Ä£Ê½
-    public CenterOfMassController comController;      // ÖÊĞÄ±àºÅ
-    public Grasp_HandTracking graspHT;                // attempt Óë×¥È¡×´Ì¬
-    public VisualDisplay visual;                      // DistanceDA/SHI/...
-    public SlippingOneFinger slipping;                // ´®¿ÚÊä³ö£¨GetMotorSpeeds5£©
-    public GoalTriggerController goal;                // Ä¿±ê´¥·¢ÊÂ¼ş
-    public ThresholdLockAndReset thresholdLock;       // ÅĞ¶ÏÊÇ·ñÔÚ Threshold£¨¿ÉÑ¡£©
+    [Header("å¤–éƒ¨è„šæœ¬ä¸å¯¹è±¡ï¼ˆä»…æ‹–æ‹½ï¼Œä¸æ”¹å®ƒä»¬ï¼‰")]
+    public ModeSwitch modeSwitch;                     // å‚ä¸è€…ç¼–å· & å½“å‰æ¨¡å¼
+    public CenterOfMassController comController;      // è´¨å¿ƒç¼–å·
+    public Grasp_HandTracking graspHT;                // attempt ä¸æŠ“å–çŠ¶æ€
+    public VisualDisplay visual;                      // DistanceDA/SHI/.
+    public SlippingOneFinger slipping;                // ä¸²å£è¾“å‡ºï¼ˆGetMotorSpeeds5ï¼‰
+    public GoalTriggerController goal;                // ç›®æ ‡è§¦å‘äº‹ä»¶
+    public ThresholdLockAndReset thresholdLock;       // åˆ¤æ–­æ˜¯å¦åœ¨ Thresholdï¼ˆå¯é€‰ï¼‰
 
-    [Header("¶ÔÏóÓëÎ»×Ë£¨Ïà¶Ô²ÎÕÕ¼ÆËã£©")]
-    public Transform cylinder;                // Ô²ÖùÌå
+    [Header("å¯¹è±¡ä¸ä½å§¿ï¼ˆç›¸å¯¹å‚ç…§è®¡ç®—ï¼‰")]
+    public Transform cylinder;                // åœ†æŸ±ä½“
     public Transform cubeCenter;              // CubeCenter
-    public Transform handCenter;              // ÊÖÕÆÖĞĞÄ£¨×¢Òâ£º¶ÀÁ¢ÓÚ Wrist£©
+    public Transform handCenter;              // æ‰‹æŒä¸­å¿ƒï¼ˆæ³¨æ„ï¼šç‹¬ç«‹äº Wristï¼‰
     public Transform rWristPalm;              // R_Wrist_Palm
 
-    [Header("ÓÒÊÖÖ¸¼â£¨Ïà¶Ô handCenter£©")]
+    [Header("å³æ‰‹æŒ‡å°–ï¼ˆç›¸å¯¹ handCenterï¼‰")]
     public Transform rThumbTip, rIndexTip, rMiddleTip, rRingTip, rLittleTip;
 
-    [Header("Îå¸öÖ¸¼â·½¿é/¿ÉÊÓ»¯ Cube£¨Ïà¶Ô cylinder£©")]
+    [Header("äº”ä¸ªæŒ‡å°–æ–¹å—/å¯è§†åŒ– Cubeï¼ˆç›¸å¯¹ cylinderï¼‰")]
     public Transform fingerDA, fingerSHI, fingerZHONG, fingerWU, fingerXIAO;
 
-    [Header("¿ÉÑ¡£º¹¦ÄÜ½Å±¾¿ª¹Ø£¨ÓÃÓÚ¼ÇÂ¼ enabled ¿ª/¹ØÊ±¼ä£©")]
-    public Behaviour followHandTracking;     // Follow_HandTracking
-    public Behaviour updownHandTracking;     // UpDown_HandTracking
-    public Behaviour fingerDA_Beh;
-    public Behaviour fingerSHI_Beh;
-    public Behaviour fingerZHONG_Beh;
-    public Behaviour fingerWU_Beh;
-    public Behaviour fingerXIAO_Beh;
-    public Behaviour cubeCenter_Beh;
-    public Behaviour cylinder_Beh;
+    [Header("å¯é€‰ï¼šåŠŸèƒ½è„šæœ¬å¼€å…³ï¼ˆç”¨äºè®°å½• enabled å¼€/å…³æ—¶é—´ï¼‰")]
+    public Behaviour followHandTracking;     // Follow_HandTrackingï¼ˆä¾æ—§æŒ‰è„šæœ¬ enabledï¼‰
+    public Behaviour updownHandTracking;     // UpDown_HandTrackingï¼ˆä¾æ—§æŒ‰è„šæœ¬ enabledï¼‰
 
-    // ¡ª¡ª µ¥²ã¼¶Êı¾İÈİÆ÷£¨È«²¿¼ü¶¼ÔÚÒ»²ã£»Vector3 È«²¿²ğÎª x/y/z£©¡ª¡ª
+    // â€”â€” ä»¥ä¸‹æ”¹ä¸º GameObjectï¼šæŒ‰ activeInHierarchy è®°å½• â€”â€”
+    public GameObject fingerDA_Obj;
+    public GameObject fingerSHI_Obj;
+    public GameObject fingerZHONG_Obj;
+    public GameObject fingerWU_Obj;
+    public GameObject fingerXIAO_Obj;
+    public GameObject cubeCenter_Obj;
+    public GameObject cylinder_Obj;
+
+    // â€•â€• å•å±‚çº§æ•°æ®å®¹å™¨ï¼ˆå…¨éƒ¨é”®éƒ½åœ¨ä¸€å±‚ï¼›Vector3 å…¨éƒ¨æ‹†ä¸º x/y/zï¼‰â€•â€•
     [Serializable]
     public class FlatData
     {
-        // »ù±¾Ê±¼äÓëÔªĞÅÏ¢
+        // åŸºæœ¬æ—¶é—´ä¸å…ƒä¿¡æ¯
         public List<float> time = new();
         public List<int> participantId = new();
         public List<string> currentMode = new();
@@ -78,13 +85,13 @@ public class UnifiedDataLogger : MonoBehaviour
         public List<float> DistanceWU = new();
         public List<float> DistanceXIAO = new();
 
-        // ´®¿ÚÓë Slipping
+        // ä¸²å£ä¸ Slipping
         public List<string> serial_out = new();
         public List<bool> SlippingOneFinger_enabled = new();
         public List<float> SlippingOneFinger_last_on_time = new();
         public List<float> SlippingOneFinger_last_off_time = new();
 
-        // Cylinder & CubeCenter£¨ÊÀ½çÎ»×Ë + ¶îÍâÖ¸±ê£©
+        // Cylinder & CubeCenterï¼ˆä¸–ç•Œä½å§¿ + é¢å¤–æŒ‡æ ‡ï¼‰
         public List<bool> Cylinder_enabled = new();
         public List<float> Cylinder_last_on_time = new();
         public List<float> Cylinder_last_off_time = new();
@@ -110,7 +117,7 @@ public class UnifiedDataLogger : MonoBehaviour
         public List<float> CubeCenter_pos_rel_cylinder_z = new();
         public List<float> CubeCenter_angle_rel_cylinder = new();
 
-        // Îå¸ö FingerCube£¨Ïà¶Ô cylinder£©
+        // äº”ä¸ª FingerCubeï¼ˆç›¸å¯¹ cylinderï¼‰
         public List<bool> FingerDA_enabled = new(); public List<float> FingerDA_last_on_time = new(); public List<float> FingerDA_last_off_time = new();
         public List<float> FingerDA_world_pos_x = new(); public List<float> FingerDA_world_pos_y = new(); public List<float> FingerDA_world_pos_z = new();
         public List<float> FingerDA_world_euler_x = new(); public List<float> FingerDA_world_euler_y = new(); public List<float> FingerDA_world_euler_z = new();
@@ -141,15 +148,15 @@ public class UnifiedDataLogger : MonoBehaviour
         public List<float> FingerXIAO_pos_rel_cylinder_x = new(); public List<float> FingerXIAO_pos_rel_cylinder_y = new(); public List<float> FingerXIAO_pos_rel_cylinder_z = new();
         public List<float> FingerXIAO_angle_rel_cylinder = new();
 
-        // HandCenter£¨ÊÀ½ç£©
+        // HandCenterï¼ˆä¸–ç•Œï¼‰
         public List<float> HandCenter_world_pos_x = new(); public List<float> HandCenter_world_pos_y = new(); public List<float> HandCenter_world_pos_z = new();
         public List<float> HandCenter_world_euler_x = new(); public List<float> HandCenter_world_euler_y = new(); public List<float> HandCenter_world_euler_z = new();
 
-        // Wrist£¨ÊÀ½ç£©
+        // Wristï¼ˆä¸–ç•Œï¼‰
         public List<float> R_Wrist_Palm_world_pos_x = new(); public List<float> R_Wrist_Palm_world_pos_y = new(); public List<float> R_Wrist_Palm_world_pos_z = new();
         public List<float> R_Wrist_Palm_world_euler_x = new(); public List<float> R_Wrist_Palm_world_euler_y = new(); public List<float> R_Wrist_Palm_world_euler_z = new();
 
-        // ÎåÖ¸¼âÏà¶Ô handCenter£¨Í¬Ê±¼ÇÂ¼ÊÀ½çÎ»×Ë£©
+        // äº”æŒ‡å°–ç›¸å¯¹ handCenterï¼ˆåŒæ—¶è®°å½•ä¸–ç•Œä½å§¿ï¼‰
         public List<float> R_ThumbTip_world_pos_x = new(); public List<float> R_ThumbTip_world_pos_y = new(); public List<float> R_ThumbTip_world_pos_z = new();
         public List<float> R_ThumbTip_world_euler_x = new(); public List<float> R_ThumbTip_world_euler_y = new(); public List<float> R_ThumbTip_world_euler_z = new();
         public List<float> R_ThumbTip_pos_rel_hand_x = new(); public List<float> R_ThumbTip_pos_rel_hand_y = new(); public List<float> R_ThumbTip_pos_rel_hand_z = new();
@@ -175,21 +182,21 @@ public class UnifiedDataLogger : MonoBehaviour
         public List<float> R_LittleTip_pos_rel_hand_x = new(); public List<float> R_LittleTip_pos_rel_hand_y = new(); public List<float> R_LittleTip_pos_rel_hand_z = new();
         public List<float> R_LittleTip_angle_rel_hand = new();
 
-        // Follow / UpDown ¹¦ÄÜ½Å±¾¿ª¹Ø
+        // Follow / UpDown åŠŸèƒ½è„šæœ¬å¼€å…³
         public List<bool> Follow_enabled = new(); public List<float> Follow_last_on_time = new(); public List<float> Follow_last_off_time = new();
         public List<bool> UpDown_enabled = new(); public List<float> UpDown_last_on_time = new(); public List<float> UpDown_last_off_time = new();
 
-        // ×ÀÃæ½Ó´¥ & Threshold
+        // æ¡Œé¢æ¥è§¦ & Threshold
         public List<bool> Cylinder_on_table = new(); public List<float> Cylinder_touch_time = new(); public List<float> Cylinder_leave_time = new();
         public List<bool> Cylinder_in_threshold = new(); public List<float> Threshold_last_enter_time = new(); public List<float> Threshold_last_exit_time = new();
 
-        // Goal ÇøÓòÓëÊÂ¼ş
+        // Goal åŒºåŸŸä¸äº‹ä»¶
         public List<bool> Goal_above = new(); public List<float> Goal_enter_time = new(); public List<float> Goal_leave_time = new();
         public List<bool> Goal_OnHoldSucceeded = new(); public List<float> Goal_OnHoldSucceeded_time = new();
         public List<bool> Goal_OnHoldInterrupted = new(); public List<float> Goal_OnHoldInterrupted_time = new();
         public List<bool> Goal_OnHoldFailedTilt = new(); public List<float> Goal_OnHoldFailedTilt_time = new();
 
-        // ²ÉÑùÍêÕûĞÔ£¨µ÷ÊÔÓÃ£©
+        // é‡‡æ ·å®Œæ•´æ€§ï¼ˆè°ƒè¯•ç”¨ï¼‰
         public List<int> sample_ok = new();
     }
 
@@ -198,19 +205,19 @@ public class UnifiedDataLogger : MonoBehaviour
     private float startTime;
     private float lastModeEnter = 0f, lastComEnter = 0f, lastAttemptEnter = 0f;
 
-    // ±ßÑØ¼ì²â£º¼ÇÂ¼¿ª¹ØµÄ last on/off Ê±¼ä
+    // è¾¹æ²¿æ£€æµ‹ï¼šè®°å½•å¼€å…³çš„ last on/off æ—¶é—´
     private float lastSlipOn = -1f, lastSlipOff = -1f;
     private float lastFollowOn = -1f, lastFollowOff = -1f, lastUpDownOn = -1f, lastUpDownOff = -1f;
     private float lastCylOn = -1f, lastCylOff = -1f, lastCubeOn = -1f, lastCubeOff = -1f;
     private bool prevFollow = false, prevUpDown = false, prevSlip = false, prevCyl = false, prevCube = false;
 
-    // ×ÀÃæ½Ó´¥
+    // æ¡Œé¢æ¥è§¦
     private bool cylinderOnTable = false; private float lastTouchTable = -1f, lastLeaveTable = -1f;
 
-    // Threshold ½øÈë/Àë¿ªÊ±¼ä£¨±ßÑØ½üËÆ£©
+    // Threshold è¿›å…¥/ç¦»å¼€æ—¶é—´ï¼ˆè¾¹æ²¿è¿‘ä¼¼ï¼‰
     private float lastThreshEnter = -1f, lastThreshExit = -1f;
 
-    // Goal ÇøÓòÓëÊÂ¼ş
+    // Goal åŒºåŸŸä¸äº‹ä»¶
     private float lastGoalEnter = -1f, lastGoalLeave = -1f;
     private bool goalSucceeded = false, goalInterrupted = false, goalFailedTilt = false;
     private float lastGoalSucceeded = -1f, lastGoalInterrupted = -1f, lastGoalFailedTilt = -1f;
@@ -222,11 +229,11 @@ public class UnifiedDataLogger : MonoBehaviour
 
     private void OnEnable()
     {
-        // Ô²ÖùÌå-×ÀÃæ½Ó´¥£¨¾²Ì¬ÊÂ¼ş£©
+        // åœ†æŸ±ä½“-æ¡Œé¢æ¥è§¦ï¼ˆé™æ€äº‹ä»¶ï¼‰
         CylinderTableContact.OnCylinderTouchTable += HandleTouchTable;
         CylinderTableContact.OnCylinderLeaveTable += HandleLeaveTable;
 
-        // Goal ÊÂ¼ş
+        // Goal äº‹ä»¶
         if (goal != null)
         {
             goal.OnHoldSucceeded += OnGoalSucceeded;
@@ -252,35 +259,18 @@ public class UnifiedDataLogger : MonoBehaviour
     {
         if (string.IsNullOrEmpty(rootPath)) rootPath = Application.persistentDataPath;
         Directory.CreateDirectory(Path.Combine(rootPath, "Data"));
-        startTime = Time.time;
-
-        // ³õÊ¼ enabled ×´Ì¬ÓëÊ±¼ä
-        prevFollow = followHandTracking != null && followHandTracking.enabled;
-        prevUpDown = updownHandTracking != null && updownHandTracking.enabled;
-        prevSlip = slipping != null && slipping.enabled;
-        prevCyl = cylinder_Beh != null && cylinder_Beh.enabled;
-        prevCube = cubeCenter_Beh != null && cubeCenter_Beh.enabled;
-
-        if (prevFollow) lastFollowOn = 0f; else lastFollowOff = 0f;
-        if (prevUpDown) lastUpDownOn = 0f; else lastUpDownOff = 0f;
-        if (prevSlip) lastSlipOn = 0f; else lastSlipOff = 0f;
-        if (prevCyl) lastCylOn = 0f; else lastCylOff = 0f;
-        if (prevCube) lastCubeOn = 0f; else lastCubeOff = 0f;
-
-        lastModeEnter = 0f;
-        lastComEnter = 0f;
-        lastAttemptEnter = 0f;
-
-        // ³õÖµ»º´æ£¬±ãÓÚ±ßÑØ¼ì²â
-        prevModeStr = (modeSwitch != null) ? modeSwitch.currentMode.ToString() : "";
-        prevCom = (comController != null) ? comController.selectedCOMIndex : int.MinValue;
-        prevAttempt = (graspHT != null) ? graspHT.AttemptCount : int.MinValue;
+        InitSegmentState(); // ç»Ÿä¸€ç”¨è¿™ä¸ªåˆå§‹åŒ–é¦–æ®µ
     }
 
     private void Update()
     {
-        // ±£´æ¼ü£ºN
-        if (Input.GetKeyDown(KeyCode.N))
+        // â€•â€• é”®ä½ï¼š5 æ¸…ç©ºå¹¶å¼€å§‹æ–°æ®µï¼›6 ä¿å­˜ â€•â€• //
+        if (Input.GetKeyDown(KeyCode.Alpha5) || Input.GetKeyDown(KeyCode.Keypad5))
+        {
+            ClearDataForNextSegment();
+            Debug.Log("[UnifiedDataLogger] Cleared data and started a new segment.");
+        }
+        if (Input.GetKeyDown(KeyCode.Alpha6) || Input.GetKeyDown(KeyCode.Keypad6))
         {
             SaveNow();
         }
@@ -288,14 +278,14 @@ public class UnifiedDataLogger : MonoBehaviour
         float t = Now();
         bool ok = true;
 
-        // ¼àÊÓ enabled ±ßÑØ£¬¼ÇÂ¼ on/off Ê±¼ä
-        EdgeWatch(ref prevFollow, followHandTracking, ref lastFollowOn, ref lastFollowOff, t);
-        EdgeWatch(ref prevUpDown, updownHandTracking, ref lastUpDownOn, ref lastUpDownOff, t);
-        EdgeWatch(ref prevSlip, slipping, ref lastSlipOn, ref lastSlipOff, t);
-        EdgeWatch(ref prevCyl, cylinder_Beh, ref lastCylOn, ref lastCylOff, t);
-        EdgeWatch(ref prevCube, cubeCenter_Beh, ref lastCubeOn, ref lastCubeOff, t);
+        // ç›‘è§†å¼€å…³è¾¹æ²¿ï¼š
+        EdgeWatch(ref prevFollow, followHandTracking, ref lastFollowOn, ref lastFollowOff, t);        // è„šæœ¬ enabled
+        EdgeWatch(ref prevUpDown, updownHandTracking, ref lastUpDownOn, ref lastUpDownOff, t);        // è„šæœ¬ enabled
+        EdgeWatch(ref prevSlip, slipping, ref lastSlipOn, ref lastSlipOff, t);                        // è„šæœ¬ enabled
+        EdgeWatch(ref prevCyl, cylinder_Obj, ref lastCylOn, ref lastCylOff, t);                       // ç‰©ä½“ active
+        EdgeWatch(ref prevCube, cubeCenter_Obj, ref lastCubeOn, ref lastCubeOff, t);                  // ç‰©ä½“ active
 
-        // »ù±¾Ê±¼äÓëÔªĞÅÏ¢
+        // åŸºæœ¬æ—¶é—´ä¸å…ƒä¿¡æ¯
         D.time.Add(t);
 
         int pid = (modeSwitch != null) ? modeSwitch.participantID : -1;
@@ -325,10 +315,10 @@ public class UnifiedDataLogger : MonoBehaviour
         }
         else { ok = false; FillZeros(D.DistanceDA, D.DistanceSHI, D.DistanceZHONG, D.DistanceWU, D.DistanceXIAO); }
 
-        // ´®¿ÚÊä³ö/Slipping
+        // ä¸²å£è¾“å‡º/Slippingï¼ˆè„šæœ¬ enabledï¼‰
         if (slipping != null)
         {
-            float[] speeds = slipping.GetMotorSpeeds5(); // ¼Ù¶¨´æÔÚ
+            float[] speeds = slipping.GetMotorSpeeds5(); // å‡å®šå­˜åœ¨
             string token = $"t:{speeds[0]},i:{speeds[1]},m:{speeds[2]},r:{speeds[3]},l:{speeds[4]}"; // l=Little
             D.serial_out.Add(token);
             D.SlippingOneFinger_enabled.Add(slipping.enabled);
@@ -337,73 +327,63 @@ public class UnifiedDataLogger : MonoBehaviour
         }
         else { ok = false; D.serial_out.Add(""); D.SlippingOneFinger_enabled.Add(false); D.SlippingOneFinger_last_on_time.Add(lastSlipOn); D.SlippingOneFinger_last_off_time.Add(lastSlipOff); }
 
-        // Cylinder£¨ÊÀ½çÎ»×Ë & ¸ß¶È£©
-        PushObjState(
+        // Cylinderï¼ˆä¸–ç•Œä½å§¿ & é«˜åº¦ï¼‰â€”â€”æŒ‰ GameObject.activeInHierarchy
+        PushObjStateGO(
             D.Cylinder_enabled, D.Cylinder_last_on_time, D.Cylinder_last_off_time,
             D.Cylinder_world_pos_x, D.Cylinder_world_pos_y, D.Cylinder_world_pos_z,
             D.Cylinder_world_euler_x, D.Cylinder_world_euler_y, D.Cylinder_world_euler_z,
-            cylinder_Beh, cylinder
+            cylinder_Obj, cylinder,
+            lastCylOn, lastCylOff
         );
         float h = (cylinder != null) ? (cylinder.position.y - 0.75f) : 0f;
         D.Cylinder_height_from_init.Add(h);
 
-        // CubeCenter£¨ÊÀ½çÎ»×Ë & Ïà¶Ô cylinder£©
-        PushObjState(
+        // CubeCenterï¼ˆä¸–ç•Œä½å§¿ & ç›¸å¯¹ cylinderï¼‰â€”â€”æŒ‰ GameObject.activeInHierarchy
+        PushObjStateGO(
             D.CubeCenter_enabled, D.CubeCenter_last_on_time, D.CubeCenter_last_off_time,
             D.CubeCenter_world_pos_x, D.CubeCenter_world_pos_y, D.CubeCenter_world_pos_z,
             D.CubeCenter_world_euler_x, D.CubeCenter_world_euler_y, D.CubeCenter_world_euler_z,
-            cubeCenter_Beh, cubeCenter
+            cubeCenter_Obj, cubeCenter,
+            lastCubeOn, lastCubeOff
         );
         PushRelPos(cubeCenter, cylinder, D.CubeCenter_pos_rel_cylinder_x, D.CubeCenter_pos_rel_cylinder_y, D.CubeCenter_pos_rel_cylinder_z);
         D.CubeCenter_angle_rel_cylinder.Add(AngleXZ(cubeCenter, cylinder));
 
-        // HandCenter£¨ÊÀ½ç£©
-        PushWorldPose(handCenter,
-            D.HandCenter_world_pos_x, D.HandCenter_world_pos_y, D.HandCenter_world_pos_z,
-            D.HandCenter_world_euler_x, D.HandCenter_world_euler_y, D.HandCenter_world_euler_z
-        );
-
-        // Wrist£¨ÊÀ½ç£©
-        PushWorldPose(rWristPalm,
-            D.R_Wrist_Palm_world_pos_x, D.R_Wrist_Palm_world_pos_y, D.R_Wrist_Palm_world_pos_z,
-            D.R_Wrist_Palm_world_euler_x, D.R_Wrist_Palm_world_euler_y, D.R_Wrist_Palm_world_euler_z
-        );
-
-        // Îå¸ö FingerCube£¨Ïà¶Ô cylinder£©
-        PushFingerBlock(
-            fingerDA_Beh, fingerDA,
+        // äº”æŒ‡å¯è§†åŒ– CUBEsï¼ˆenabled æ”¹ä¸ºæŒ‰ GameObject.activeInHierarchyï¼›last_on/off æ²¿ç”¨æ—§é€»è¾‘ï¼šå†™ -1ï¼‰
+        PushFingerBlockGO(
+            fingerDA_Obj, fingerDA,
             D.FingerDA_enabled, D.FingerDA_last_on_time, D.FingerDA_last_off_time,
             D.FingerDA_world_pos_x, D.FingerDA_world_pos_y, D.FingerDA_world_pos_z,
             D.FingerDA_world_euler_x, D.FingerDA_world_euler_y, D.FingerDA_world_euler_z,
             D.FingerDA_pos_rel_cylinder_x, D.FingerDA_pos_rel_cylinder_y, D.FingerDA_pos_rel_cylinder_z,
             D.FingerDA_angle_rel_cylinder
         );
-        PushFingerBlock(
-            fingerSHI_Beh, fingerSHI,
+        PushFingerBlockGO(
+            fingerSHI_Obj, fingerSHI,
             D.FingerSHI_enabled, D.FingerSHI_last_on_time, D.FingerSHI_last_off_time,
             D.FingerSHI_world_pos_x, D.FingerSHI_world_pos_y, D.FingerSHI_world_pos_z,
             D.FingerSHI_world_euler_x, D.FingerSHI_world_euler_y, D.FingerSHI_world_euler_z,
             D.FingerSHI_pos_rel_cylinder_x, D.FingerSHI_pos_rel_cylinder_y, D.FingerSHI_pos_rel_cylinder_z,
             D.FingerSHI_angle_rel_cylinder
         );
-        PushFingerBlock(
-            fingerZHONG_Beh, fingerZHONG,
+        PushFingerBlockGO(
+            fingerZHONG_Obj, fingerZHONG,
             D.FingerZHONG_enabled, D.FingerZHONG_last_on_time, D.FingerZHONG_last_off_time,
             D.FingerZHONG_world_pos_x, D.FingerZHONG_world_pos_y, D.FingerZHONG_world_pos_z,
             D.FingerZHONG_world_euler_x, D.FingerZHONG_world_euler_y, D.FingerZHONG_world_euler_z,
             D.FingerZHONG_pos_rel_cylinder_x, D.FingerZHONG_pos_rel_cylinder_y, D.FingerZHONG_pos_rel_cylinder_z,
             D.FingerZHONG_angle_rel_cylinder
         );
-        PushFingerBlock(
-            fingerWU_Beh, fingerWU,
+        PushFingerBlockGO(
+            fingerWU_Obj, fingerWU,
             D.FingerWU_enabled, D.FingerWU_last_on_time, D.FingerWU_last_off_time,
             D.FingerWU_world_pos_x, D.FingerWU_world_pos_y, D.FingerWU_world_pos_z,
             D.FingerWU_world_euler_x, D.FingerWU_world_euler_y, D.FingerWU_world_euler_z,
             D.FingerWU_pos_rel_cylinder_x, D.FingerWU_pos_rel_cylinder_y, D.FingerWU_pos_rel_cylinder_z,
             D.FingerWU_angle_rel_cylinder
         );
-        PushFingerBlock(
-            fingerXIAO_Beh, fingerXIAO,
+        PushFingerBlockGO(
+            fingerXIAO_Obj, fingerXIAO,
             D.FingerXIAO_enabled, D.FingerXIAO_last_on_time, D.FingerXIAO_last_off_time,
             D.FingerXIAO_world_pos_x, D.FingerXIAO_world_pos_y, D.FingerXIAO_world_pos_z,
             D.FingerXIAO_world_euler_x, D.FingerXIAO_world_euler_y, D.FingerXIAO_world_euler_z,
@@ -411,7 +391,19 @@ public class UnifiedDataLogger : MonoBehaviour
             D.FingerXIAO_angle_rel_cylinder
         );
 
-        // ÎåÖ¸¼â£¨ÊÀ½ç + Ïà¶Ô handCenter£©
+        // HandCenterï¼ˆä¸–ç•Œï¼‰
+        PushWorldPose(handCenter,
+            D.HandCenter_world_pos_x, D.HandCenter_world_pos_y, D.HandCenter_world_pos_z,
+            D.HandCenter_world_euler_x, D.HandCenter_world_euler_y, D.HandCenter_world_euler_z
+        );
+
+        // Wristï¼ˆä¸–ç•Œï¼‰
+        PushWorldPose(rWristPalm,
+            D.R_Wrist_Palm_world_pos_x, D.R_Wrist_Palm_world_pos_y, D.R_Wrist_Palm_world_pos_z,
+            D.R_Wrist_Palm_world_euler_x, D.R_Wrist_Palm_world_euler_y, D.R_Wrist_Palm_world_euler_z
+        );
+
+        // äº”æŒ‡éª¨éª¼ï¼ˆç›¸å¯¹ handCenterï¼‰
         PushHandPoint(
             rThumbTip,
             D.R_ThumbTip_world_pos_x, D.R_ThumbTip_world_pos_y, D.R_ThumbTip_world_pos_z,
@@ -448,7 +440,7 @@ public class UnifiedDataLogger : MonoBehaviour
             D.R_LittleTip_angle_rel_hand
         );
 
-        // Follow / UpDown
+        // Follow / UpDownï¼ˆè„šæœ¬ enabledï¼‰
         D.Follow_enabled.Add(followHandTracking != null && followHandTracking.enabled);
         D.Follow_last_on_time.Add(lastFollowOn);
         D.Follow_last_off_time.Add(lastFollowOff);
@@ -457,7 +449,7 @@ public class UnifiedDataLogger : MonoBehaviour
         D.UpDown_last_on_time.Add(lastUpDownOn);
         D.UpDown_last_off_time.Add(lastUpDownOff);
 
-        // ×ÀÃæ½Ó´¥ & Threshold
+        // æ¡Œé¢æ¥è§¦ & Threshold
         D.Cylinder_on_table.Add(cylinderOnTable);
         D.Cylinder_touch_time.Add(lastTouchTable);
         D.Cylinder_leave_time.Add(lastLeaveTable);
@@ -467,7 +459,7 @@ public class UnifiedDataLogger : MonoBehaviour
         D.Threshold_last_enter_time.Add(lastThreshEnter);
         D.Threshold_last_exit_time.Add(lastThreshExit);
 
-        // Goal ÇøÓòÓëÊÂ¼ş
+        // Goal åŒºåŸŸä¸äº‹ä»¶
         bool above = (goal != null) ? goal.isCylinderAboveAndClear : false;
         D.Goal_above.Add(above);
         D.Goal_enter_time.Add(lastGoalEnter);
@@ -478,63 +470,36 @@ public class UnifiedDataLogger : MonoBehaviour
 
         D.sample_ok.Add(ok ? 1 : 0);
 
-        // ½øÈëÊ±¼äµÄ¸üĞÂ£¨Ä£Ê½/COM/attempt ±ä»¯±ßÑØ£©
+        // è¿›å…¥æ—¶é—´çš„æ›´æ–°ï¼ˆæ¨¡å¼/COM/attempt å˜åŒ–è¾¹æ²¿ï¼‰
         TrackModeComAttemptEnterTimes();
     }
 
-    // ¡ª¡ª ÊÂ¼ş»Øµ÷ ¡ª¡ª //
-    private void HandleTouchTable()
-    {
-        cylinderOnTable = true; lastTouchTable = Now();
-    }
-    private void HandleLeaveTable()
-    {
-        cylinderOnTable = false; lastLeaveTable = Now();
-    }
-    private void OnGoalSucceeded(float tHold)
-    {
-        goalSucceeded = true; lastGoalSucceeded = Now();
-    }
-    private void OnGoalInterrupted(float tHold)
-    {
-        goalInterrupted = true; lastGoalInterrupted = Now();
-    }
-    private void OnGoalFailedTilt(float tHold, float tiltDeg)
-    {
-        goalFailedTilt = true; lastGoalFailedTilt = Now();
-    }
+    // â€•â€• äº‹ä»¶å›è°ƒ â€•â€• //
+    private void HandleTouchTable() { cylinderOnTable = true; lastTouchTable = Now(); }
+    private void HandleLeaveTable() { cylinderOnTable = false; lastLeaveTable = Now(); }
+    private void OnGoalSucceeded(float tHold) { goalSucceeded = true; lastGoalSucceeded = Now(); }
+    private void OnGoalInterrupted(float tHold) { goalInterrupted = true; lastGoalInterrupted = Now(); }
+    private void OnGoalFailedTilt(float tHold, float tiltDeg) { goalFailedTilt = true; lastGoalFailedTilt = Now(); }
 
-    // ¡ª¡ª ×´Ì¬/½øÈëÊ±¼ä¸ú×Ù ¡ª¡ª //
+    // â€•â€• çŠ¶æ€/è¿›å…¥æ—¶é—´è·Ÿè¸ª â€•â€• //
     private void TrackModeComAttemptEnterTimes()
     {
         string modeNow = (modeSwitch != null) ? modeSwitch.currentMode.ToString() : "";
-        if (modeNow != prevModeStr)
-        {
-            lastModeEnter = Now();
-            prevModeStr = modeNow;
-        }
+        if (modeNow != prevModeStr) { lastModeEnter = Now(); prevModeStr = modeNow; }
 
         int comNow = (comController != null) ? comController.selectedCOMIndex : int.MinValue;
-        if (comNow != prevCom)
-        {
-            lastComEnter = Now();
-            prevCom = comNow;
-        }
+        if (comNow != prevCom) { lastComEnter = Now(); prevCom = comNow; }
 
         int attemptNow = (graspHT != null) ? graspHT.AttemptCount : int.MinValue;
-        if (attemptNow != prevAttempt)
-        {
-            lastAttemptEnter = Now();
-            prevAttempt = attemptNow;
-        }
+        if (attemptNow != prevAttempt) { lastAttemptEnter = Now(); prevAttempt = attemptNow; }
 
-        // Goal ÇøÓò½øÈë/Àë¿ª´ÖÂÔ±ßÑØ
+        // Goal åŒºåŸŸè¿›å…¥/ç¦»å¼€ç²—ç•¥è¾¹æ²¿
         bool above = (goal != null) ? goal.isCylinderAboveAndClear : false;
         if (above && lastGoalEnter < 0f) lastGoalEnter = Now();
         if (!above && lastGoalLeave < 0f) lastGoalLeave = Now();
     }
 
-    // ¡ª¡ª ±£´æ ¡ª¡ª //
+    // â€•â€• ä¿å­˜ â€•â€• //
     private void SaveNow()
     {
         string dir = Path.Combine(rootPath, "Data");
@@ -552,92 +517,76 @@ public class UnifiedDataLogger : MonoBehaviour
         }
         else
         {
-            string capturedPath = path;
-            string capturedJson = json;
+            string capturedPath = path; string capturedJson = json;
             new Thread(() => File.WriteAllText(capturedPath, capturedJson)).Start();
             Debug.Log($"[UnifiedDataLogger] Saving (threaded): {path}");
         }
-
-        // ÈôÄãÏë¡°Ò»¶ÎÒ»ÎÄ¼ş¡±£¬ÔÚ´ËÇå¿Õ£¬²¢ÖØÖÃ¼ÆÊ±
+        // å¦‚éœ€â€œåˆ†æ®µä¸€æ–‡ä»¶â€ï¼Œå¯åœ¨æ­¤æ¸…ç©ºä¸‹ä¸€æ®µ
         // ClearDataForNextSegment();
+    }
+
+    // â€•â€• æ®µåˆå§‹åŒ–ï¼ˆé¦–æ®µä¸æ¸…ç©ºåå¤ç”¨ï¼‰â€•â€•
+    private void InitSegmentState()
+    {
+        startTime = Time.time;
+
+        // åˆå§‹åŒ– enabled/active çŠ¶æ€ä¸æ—¶é—´åŸºçº¿
+        prevFollow = followHandTracking != null && followHandTracking.enabled;
+        prevUpDown = updownHandTracking != null && updownHandTracking.enabled;
+        prevSlip = slipping != null && slipping.enabled;
+        prevCyl = cylinder_Obj != null && cylinder_Obj.activeInHierarchy;
+        prevCube = cubeCenter_Obj != null && cubeCenter_Obj.activeInHierarchy;
+
+        lastFollowOn = prevFollow ? 0f : -1f; lastFollowOff = prevFollow ? -1f : 0f;
+        lastUpDownOn = prevUpDown ? 0f : -1f; lastUpDownOff = prevUpDown ? -1f : 0f;
+        lastSlipOn = prevSlip ? 0f : -1f; lastSlipOff = prevSlip ? -1f : 0f;
+        lastCylOn = prevCyl ? 0f : -1f; lastCylOff = prevCyl ? -1f : 0f;
+        lastCubeOn = prevCube ? 0f : -1f; lastCubeOff = prevCube ? -1f : 0f;
+
+        lastModeEnter = 0f; lastComEnter = 0f; lastAttemptEnter = 0f;
+
+        prevModeStr = (modeSwitch != null) ? modeSwitch.currentMode.ToString() : "";
+        prevCom = (comController != null) ? comController.selectedCOMIndex : int.MinValue;
+        prevAttempt = (graspHT != null) ? graspHT.AttemptCount : int.MinValue;
+
+        // çŠ¶æ€æ¸…é›¶
+        cylinderOnTable = false; lastTouchTable = -1f; lastLeaveTable = -1f;
+        lastThreshEnter = -1f; lastThreshExit = -1f;
+        lastGoalEnter = -1f; lastGoalLeave = -1f;
+        goalSucceeded = goalInterrupted = goalFailedTilt = false;
+        lastGoalSucceeded = lastGoalInterrupted = lastGoalFailedTilt = -1f;
     }
 
     private void ClearDataForNextSegment()
     {
         D = new FlatData();
-        startTime = Time.time;
-        lastModeEnter = lastComEnter = lastAttemptEnter = 0f;
-
-        lastSlipOn = lastSlipOff = lastFollowOn = lastFollowOff = lastUpDownOn = lastUpDownOff = -1f;
-        lastCylOn = lastCylOff = lastCubeOn = lastCubeOff = -1f;
-        lastThreshEnter = lastThreshExit = -1f;
-        lastGoalEnter = lastGoalLeave = -1f;
-        goalSucceeded = goalInterrupted = goalFailedTilt = false;
+        InitSegmentState(); // æ¸…ç©ºåå®Œæ•´é‡ç½®åŸºçº¿ï¼Œé¿å…è™šå‡è¾¹æ²¿
     }
 
-    // ¡ª¡ª ¹¤¾ßº¯Êı ¡ª¡ª //
+    // â€•â€• å·¥å…·å‡½æ•° â€•â€• //
     private float Now() => Time.time - startTime;
 
+    // è¡Œä¸ºè„šæœ¬ï¼ˆBehaviour.enabledï¼‰è¾¹æ²¿ç›‘å¬
     private void EdgeWatch(ref bool prev, Behaviour beh, ref float lastOn, ref float lastOff, float tNow)
     {
         bool cur = (beh != null) && beh.enabled;
-        if (cur != prev)
-        {
-            if (cur) lastOn = tNow; else lastOff = tNow;
-            prev = cur;
-        }
+        if (cur != prev) { if (cur) lastOn = tNow; else lastOff = tNow; prev = cur; }
+    }
+    // GameObjectï¼ˆactiveInHierarchyï¼‰è¾¹æ²¿ç›‘å¬
+    private void EdgeWatch(ref bool prev, GameObject go, ref float lastOn, ref float lastOff, float tNow)
+    {
+        bool cur = (go != null) && go.activeInHierarchy;
+        if (cur != prev) { if (cur) lastOn = tNow; else lastOff = tNow; prev = cur; }
     }
 
-    private void PushObjState(
-        List<bool> en, List<float> ton, List<float> toff,
-        List<float> pos_x, List<float> pos_y, List<float> pos_z,
-        List<float> eul_x, List<float> eul_y, List<float> eul_z,
-        Behaviour beh, Transform tr)
-    {
-        bool enabled = beh != null && beh.enabled;
-        en.Add(enabled);
-        ton.Add(GetLastOn(beh));
-        toff.Add(GetLastOff(beh));
-        PushWorldPose(tr, pos_x, pos_y, pos_z, eul_x, eul_y, eul_z);
-    }
-
-    private float GetLastOn(Behaviour beh)
-    {
-        if (beh == followHandTracking) return lastFollowOn;
-        if (beh == updownHandTracking) return lastUpDownOn;
-        if (beh == cylinder_Beh) return lastCylOn;
-        if (beh == cubeCenter_Beh) return lastCubeOn;
-        if (beh == slipping) return lastSlipOn;
-        if (beh == fingerDA_Beh) return -1f;
-        if (beh == fingerSHI_Beh) return -1f;
-        if (beh == fingerZHONG_Beh) return -1f;
-        if (beh == fingerWU_Beh) return -1f;
-        if (beh == fingerXIAO_Beh) return -1f;
-        return -1f;
-    }
-    private float GetLastOff(Behaviour beh)
-    {
-        if (beh == followHandTracking) return lastFollowOff;
-        if (beh == updownHandTracking) return lastUpDownOff;
-        if (beh == cylinder_Beh) return lastCylOff;
-        if (beh == cubeCenter_Beh) return lastCubeOff;
-        if (beh == slipping) return lastSlipOff;
-        if (beh == fingerDA_Beh) return -1f;
-        if (beh == fingerSHI_Beh) return -1f;
-        if (beh == fingerZHONG_Beh) return -1f;
-        if (beh == fingerWU_Beh) return -1f;
-        if (beh == fingerXIAO_Beh) return -1f;
-        return -1f;
-    }
-
+    // ä¸–ç•Œä½å§¿å†™å…¥
     private void PushWorldPose(Transform tr,
         List<float> pos_x, List<float> pos_y, List<float> pos_z,
         List<float> eul_x, List<float> eul_y, List<float> eul_z)
     {
         if (tr != null)
         {
-            var p = tr.position;
-            var e = tr.rotation.eulerAngles;
+            var p = tr.position; var e = tr.rotation.eulerAngles;
             pos_x.Add(p.x); pos_y.Add(p.y); pos_z.Add(p.z);
             eul_x.Add(e.x); eul_y.Add(e.y); eul_z.Add(e.z);
         }
@@ -648,6 +597,21 @@ public class UnifiedDataLogger : MonoBehaviour
         }
     }
 
+    // Cylinder/CubeCenterï¼šæŒ‰ GameObject.activeInHierarchy + è®°å½• lastOn/Offï¼ˆæ¥è‡ªè¾¹æ²¿ç›‘å¬ï¼‰
+    private void PushObjStateGO(
+        List<bool> en, List<float> ton, List<float> toff,
+        List<float> pos_x, List<float> pos_y, List<float> pos_z,
+        List<float> eul_x, List<float> eul_y, List<float> eul_z,
+        GameObject go, Transform tr,
+        float lastOn, float lastOff)
+    {
+        bool active = (go != null) && go.activeInHierarchy;
+        en.Add(active);
+        ton.Add(lastOn);
+        toff.Add(lastOff);
+        PushWorldPose(tr, pos_x, pos_y, pos_z, eul_x, eul_y, eul_z);
+    }
+
     private void PushRelPos(Transform a, Transform refTr,
         List<float> rx, List<float> ry, List<float> rz)
     {
@@ -656,10 +620,7 @@ public class UnifiedDataLogger : MonoBehaviour
             Vector3 r = refTr.InverseTransformPoint(a.position);
             rx.Add(r.x); ry.Add(r.y); rz.Add(r.z);
         }
-        else
-        {
-            rx.Add(0f); ry.Add(0f); rz.Add(0f);
-        }
+        else { rx.Add(0f); ry.Add(0f); rz.Add(0f); }
     }
 
     private float AngleXZ(Transform a, Transform center)
@@ -667,21 +628,22 @@ public class UnifiedDataLogger : MonoBehaviour
         if (a == null || center == null) return 0f;
         Vector3 v = a.position - center.position; v.y = 0f;
         if (v.sqrMagnitude < 1e-8f) return 0f;
-        return Mathf.Atan2(v.z, v.x) * Mathf.Rad2Deg; // ÒÔ X ÖáÎª 0¡ã
+        return Mathf.Atan2(v.z, v.x) * Mathf.Rad2Deg; // ä»¥ X è½´ä¸º 0Â°
     }
 
-    private void PushFingerBlock(
-        Behaviour beh, Transform tr,
+    // æŒ‡å°–å¯è§†åŒ– Cubeï¼šæŒ‰ GameObject.activeInHierarchyï¼›last_on/off ç»´æŒ -1ï¼ˆå’Œæ—§ç‰ˆä¸€è‡´ï¼‰
+    private void PushFingerBlockGO(
+        GameObject go, Transform tr,
         List<bool> en, List<float> ton, List<float> toff,
         List<float> wpos_x, List<float> wpos_y, List<float> wpos_z,
         List<float> weul_x, List<float> weul_y, List<float> weul_z,
         List<float> rel_x, List<float> rel_y, List<float> rel_z,
         List<float> ang)
     {
-        bool enabled = beh != null && beh.enabled;
-        en.Add(enabled);
-        ton.Add(GetLastOn(beh));
-        toff.Add(GetLastOff(beh));
+        bool active = (go != null) && go.activeInHierarchy;
+        en.Add(active);
+        ton.Add(-1f); // æ—§é€»è¾‘æœªåšè¾¹æ²¿è·Ÿè¸ª
+        toff.Add(-1f);
         PushWorldPose(tr, wpos_x, wpos_y, wpos_z, weul_x, weul_y, weul_z);
         PushRelPos(tr, cylinder, rel_x, rel_y, rel_z);
         ang.Add(AngleXZ(tr, cylinder));
@@ -701,17 +663,10 @@ public class UnifiedDataLogger : MonoBehaviour
             rel_x.Add(r.x); rel_y.Add(r.y); rel_z.Add(r.z);
             ang.Add(AngleXZ(tr, handCenter));
         }
-        else
-        {
-            rel_x.Add(0f); rel_y.Add(0f); rel_z.Add(0f);
-            ang.Add(0f);
-        }
+        else { rel_x.Add(0f); rel_y.Add(0f); rel_z.Add(0f); ang.Add(0f); }
     }
 
-    private void FillZeros(params List<float>[] lists)
-    {
-        foreach (var L in lists) L.Add(0f);
-    }
+    private void FillZeros(params List<float>[] lists) { foreach (var L in lists) L.Add(0f); }
 
     private string GetGraspState(Grasp_HandTracking ght)
     {
@@ -728,7 +683,7 @@ public class UnifiedDataLogger : MonoBehaviour
         return "Unknown";
     }
 
-    // ¡ª¡ª ãĞÖµÇøÓò´ÖÂÔ¼ì²â£¨¿ÉÑ¡£¬ÈôÃ»ÓĞ¸üºÃÊÂ¼ş£©¡ª¡ª
+    // â€•â€• é˜ˆå€¼åŒºåŸŸç²—ç•¥æ£€æµ‹ï¼ˆå¯é€‰ï¼Œè‹¥æ²¡æœ‰æ›´å¥½äº‹ä»¶ï¼‰â€•â€•
     private bool IsInThreshold()
     {
         if (thresholdLock == null || cylinder == null) return false;

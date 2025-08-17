@@ -336,7 +336,15 @@ public class GoalTriggerController : MonoBehaviour
                 var ab = cube.GetComponent<ArticulationBody>();
                 if (ab != null)
                 {
-                    ab.TeleportRoot(targetPos, cube.transform.rotation);
+                    if (ab.isRoot)   // ✅ 只有根 ArticulationBody 才能用 TeleportRoot
+                    {
+                        ab.TeleportRoot(targetPos, cube.transform.rotation);
+                    }
+                    else
+                    {
+                        cube.transform.position = targetPos;   // ✅ 非根直接改 Transform
+                    }
+
                     if (zeroCubesVelocityOnReset)
                     {
                         ab.velocity = Vector3.zero;
@@ -346,6 +354,7 @@ public class GoalTriggerController : MonoBehaviour
                 else
                 {
                     cube.transform.position = targetPos;
+
                     var rb = cube.GetComponent<Rigidbody>();
                     if (rb != null && zeroCubesVelocityOnReset)
                     {
