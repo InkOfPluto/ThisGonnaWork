@@ -18,6 +18,7 @@ using UnityEngine;
 /// 3) 阈值（Threshold）与 Goal 的进入/离开采用边沿检测（每次进入/离开都更新）；Goal 结果事件为“脉冲”，当帧为 true，随后复位；
 /// 4) OutOfAttempt 以脉冲+时间戳记录（保持不变）；
 /// 5) ★ 新增：记录 grasp_state 更改的时间戳。
+/// 6) ★ 新增：记录 COM 的坐标、离中心的距离和角度。
 /// </summary>
 public class UnifiedDataLogger : MonoBehaviour
 {
@@ -75,6 +76,12 @@ public class UnifiedDataLogger : MonoBehaviour
 
         public List<int> com_index = new();
         public List<float> com_enter_time = new();
+        // ★ 新增：COM 位置、距离、角度
+        public List<float> COM_pos_x = new();
+        public List<float> COM_pos_y = new();
+        public List<float> COM_pos_z = new();
+        public List<float> COM_distance_from_center = new();
+        public List<float> COM_angle_from_center = new();
 
         public List<int> attempt_index = new();
         public List<float> attempt_enter_time = new();
@@ -343,6 +350,30 @@ public class UnifiedDataLogger : MonoBehaviour
         int comIdx = (comController != null) ? comController.selectedCOMIndex : -1;
         D.com_index.Add(comIdx);
         D.com_enter_time.Add(lastComEnter);
+
+        if (comController != null && comIdx >= 0 && comIdx < comController.centerOfMassList.Length)
+        {
+            Vector3 local = comController.centerOfMassList[comIdx];
+            Vector3 world = comController.targetObject.transform.TransformPoint(local);
+            D.COM_pos_x.Add(world.x);
+            D.COM_pos_y.Add(world.y);
+            D.COM_pos_z.Add(world.z);
+
+            Vector3 refPos = (comController.cylinderCenter != null) ? comController.cylinderCenter.position : (cylinder != null ? cylinder.position : Vector3.zero);
+            Vector3 diff = world - refPos;
+            float dist = new Vector2(diff.x, diff.z).magnitude;
+            float ang = Mathf.Atan2(diff.z, diff.x) * Mathf.Rad2Deg; // X 轴为 0°
+            D.COM_distance_from_center.Add(dist);
+            D.COM_angle_from_center.Add(ang);
+        }
+        else
+        {
+            D.COM_pos_x.Add(0f);
+            D.COM_pos_y.Add(0f);
+            D.COM_pos_z.Add(0f);
+            D.COM_distance_from_center.Add(0f);
+            D.COM_angle_from_center.Add(0f);
+        }
 
         int attempt = (graspHT != null) ? graspHT.AttemptCount : -1;
         D.attempt_index.Add(attempt);

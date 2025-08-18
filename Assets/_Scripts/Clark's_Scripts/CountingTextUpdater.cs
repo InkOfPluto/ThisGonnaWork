@@ -1,36 +1,35 @@
-using UnityEngine;
+ï»¿using UnityEngine;
 using TMPro;
 
 public class CountingTextUpdater : MonoBehaviour
 {
-    [Header("²Ù×÷ËµÃ÷ | Instructions")]
+    [Header("æ“ä½œè¯´æ˜ | Instructions")]
     [ReadOnly]
     [TextArea(3, 10)]
     public string instructions =
-        "¹¦ÄÜ£º½«Ä£°åÖĞµÄÕ¼Î»·ûÌæ»»ºóÏÔÊ¾ÔÚ TextMeshProUGUI ÉÏ\n" +
-        "Õ¼Î»·û£º{mode}¡¢{currentCOM}¡¢{totalCOMs}¡¢{attempts}\n" +
-        "Inspector£º°ó¶¨ ModeSwitch¡¢CenterOfMassController¡¢Grasp_HandTracking¡¢TextMeshProUGUI\n" +
-        "ÔËĞĞÊ±£ºÃ¿Ö¡¸ù¾İ modeSwitch.currentMode¡¢comController.selectedCOMIndex ºÍ attemptCounter.AttemptCount ¸üĞÂÎÄ±¾\n";
+        "åŠŸèƒ½ï¼šå°†æ¨¡æ¿ä¸­çš„å ä½ç¬¦æ›¿æ¢åæ˜¾ç¤ºåœ¨ TextMeshProUGUI ä¸Š\n" +
+        "å ä½ç¬¦ï¼š{mode}ã€{currentCOM}ã€{totalCOMs}ã€{attempts}\n" +
+        "Inspectorï¼šç»‘å®š ModeSwitchã€CenterOfMassControllerã€Grasp_HandTrackingã€TextMeshProUGUI\n" +
+        "è¿è¡Œæ—¶ï¼šæ¯å¸§æ ¹æ® modeSwitch.currentModeã€comController.comProgressCounter å’Œ attemptCounter.AttemptCount æ›´æ–°æ–‡æœ¬\n";
 
-    [Header("References | ÒıÓÃ×é¼ş")]
-    public ModeSwitch modeSwitch;                    // Ä£Ê½¹ÜÀíÆ÷
-    public CenterOfMassController comController;     // ÖÊĞÄ¹ÜÀíÆ÷
-    public Grasp_HandTracking attemptCounter;        // ×¥ÎÕ´ÎÊıÍ³¼Æ
-    public TextMeshProUGUI textUI;                   // TextMeshPro ×é¼ş
+    [Header("References | å¼•ç”¨ç»„ä»¶")]
+    public ModeSwitch modeSwitch;
+    public CenterOfMassController comController;
+    public Grasp_HandTracking attemptCounter;
+    public TextMeshProUGUI textUI;
 
-    [Header("Text Template | ÎÄ±¾Ä£°å£¨Ö§³ÖÕ¼Î»·û£©")]
+    [Header("Text Template | æ–‡æœ¬æ¨¡æ¿ï¼ˆæ”¯æŒå ä½ç¬¦ï¼‰")]
     [TextArea(3, 5)]
     public string template =
         "Hello! You are currently in the {mode} block.\n" +
         "Now at COM {currentCOM}/{totalCOMs}.\n" +
-        "You have tried {attempts} times for this COM."; 
+        "You have tried {attempts} times for this COM.";
 
     void Update()
     {
         if (textUI == null || modeSwitch == null || comController == null || attemptCounter == null)
             return;
 
-        // »ñÈ¡Ä£Ê½Ãû³Æ
         string modeName = modeSwitch.currentMode switch
         {
             ModeSwitch.ExperimentMode.Visual => "Visual",
@@ -39,14 +38,12 @@ public class CountingTextUpdater : MonoBehaviour
             _ => "Unknown"
         };
 
-        // »ñÈ¡ÖÊĞÄ½ø¶È£¨Ö±½Ó´Ó 0 ¿ªÊ¼¼ÆÊı£©
-        int currentCOM = comController.selectedCOMIndex;
-        int totalCOMs = comController.centerOfMassList.Length;
+        // âœ… ä½¿ç”¨ç´¯è®¡è®¡æ•°å™¨ï¼ˆæ’é™¤ç¼–å·0ï¼Œæ˜¾ç¤º /15ï¼‰
+        int currentCOM = comController.comProgressCounter;
+        int totalCOMs = comController.centerOfMassList.Length - 1; // 16-1 = 15
 
-        // »ñÈ¡³¢ÊÔ´ÎÊı
         int attempts = attemptCounter.AttemptCount;
 
-        // Õ¼Î»·ûÌæ»»
         string output = template
             .Replace("{mode}", modeName)
             .Replace("{currentCOM}", currentCOM.ToString())
