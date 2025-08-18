@@ -1,0 +1,307 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Instructions</title>
+  <style>
+    :root { --bg:#0b1020; --card:#11182d; --ink:#e7ecff; --muted:#b7c1e6; --accent:#5da0ff; --accent-2:#2dd4bf; --border:#22315a; --focus:#94b4ff; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji";
+      background: radial-gradient(1200px 800px at 70% -10%, #1a2450 0%, var(--bg) 60%);
+      color: var(--ink);
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      min-height: 100vh;
+    }
+    header {
+      display: flex; align-items: center; gap: .75rem;
+      padding: 1rem clamp(1rem, 4vw, 2rem);
+      border-bottom: 1px solid rgba(148,180,255,.35);
+      position: sticky; top: 0; z-index: 100;
+      background: #0b1020;
+    }
+    header .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px rgba(93,160,255, .15); }
+    header h1 { font-size: clamp(1.15rem, 2.2vw, 1.6rem); margin: 0; font-weight: 700; letter-spacing: .2px; }
+    header .day { display: none; }
+
+    main { padding: clamp(1rem, 4vw, 2rem); display: grid; place-items: start center; }
+    .card {
+      width: min(980px, 100%);
+      background: linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.02));
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: clamp(1rem, 4vw, 2rem);
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+    .section-title { font-size: clamp(1.1rem, 2vw, 1.35rem); margin: .25rem 0 1rem; opacity: .95; }
+    .prose { color: var(--ink); line-height: 1.65; font-size: 1rem; }
+    .prose p { margin: 0 0 .8rem; color: var(--muted); }
+    .prose b { color: var(--ink); }
+    .prose .note { font-size: .95rem; padding: .75rem .9rem; background: #0e1630; border: 1px dashed var(--border); border-radius: 12px; color: var(--muted); }
+    .prose img, .prose video { width: 80%; height: auto; border-radius: 10px; display: block; margin: 1rem auto; }
+
+    .toolbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+    .progress { display: flex; align-items: center; gap: .5rem; color: var(--muted); font-size: .95rem; }
+    .progress .bar { --pct: 0%; width: 160px; height: 8px; border-radius: 99px; background: #0e1630; border: 1px solid var(--border); overflow: hidden; }
+    .progress .bar > i { display: block; height: 100%; width: var(--pct); background: linear-gradient(90deg, var(--accent), var(--accent-2)); }
+
+    .nav { display: flex; gap: .5rem; }
+    .btn { appearance: none; border: 1px solid var(--border); background: #0f1731; color: var(--ink); padding: .7rem 1rem; border-radius: 12px; font-weight: 600; cursor: pointer; transition: .2s ease; }
+    .btn[disabled] { opacity: .4; cursor: not-allowed; }
+    .btn:hover:not([disabled]) { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,.25); border-color: #2b3f79; }
+    .btn.primary { background: linear-gradient(90deg, var(--accent), var(--accent-2)); border-color: transparent; color: #0b1020; }
+    .hint { margin-top: .5rem; color: var(--muted); font-size: .9rem; }
+
+    a.skip { position: absolute; left: -9999px; top: auto; width: 1px; height: 1px; overflow: hidden; }
+    a.skip:focus { left: 1rem; top: 1rem; width: auto; height: auto; padding: .5rem .75rem; background: #fff; color: #000; border-radius: .5rem; }
+
+    .error { padding: .75rem 1rem; border: 1px dashed #cc6b6b; background:#2a0f16; color:#ffdada; border-radius:12px; }
+  </style>
+</head>
+<body>
+  <a href="#content" class="skip">Skip to content</a>
+
+  <header>
+    <span class="dot" aria-hidden="true"></span>
+    <h1 id="title">Instructions</h1>
+  </header>
+
+  <main id="content">
+    <article class="card" aria-live="polite">
+      <h2 class="section-title" id="sectionTitle">Virtual Environment</h2>
+      <div class="prose" id="text"></div>
+
+      <div class="toolbar">
+        <div class="progress" aria-label="Progress">
+          <span id="stepLabel">Step</span>
+          <div class="bar" aria-hidden="true"><i id="progressFill" style="width: 0%"></i></div>
+        </div>
+        <div class="nav">
+          <button class="btn" id="backBtn">Back</button>
+          <button class="btn primary" id="nextBtn">Next</button>
+        </div>
+      </div>
+      <p class="hint">Tip: Use ← and → to navigate.</p>
+    </article>
+  </main>
+
+  <footer style="padding:1rem; text-align:center; color:var(--muted); border-top:1px solid var(--border);">
+    © <span id="year"></span> Your Lab / Project
+  </footer>
+
+  <script>
+    const PAGES = [
+      /* ---------- Page 1 ---------- */
+      {
+        title: 'Page 1 — Overview | 页面 1 — 概览',
+        html: `
+          <p><b>Thank you very much for participating in this experiment!</b> | <b>非常感谢您参加本次实验！</b></p>
+          <p>Next, we will provide you with the experiment instructions and operation tutorial, which will take about 10 minutes. | 接下来将为您进行实验说明与操作教学，预计耗时约 10 分钟。</p>
+          <br>
+          <h3>Experiment Goal | 实验目标</h3>
+          <ul>
+            <li>Use the five small cubes (representing fingers) to lift the offset cylinder above the target height and hold it stably for 3 seconds. | 使用五个小立方体（代表手指）将偏心圆柱体抓起，移动到目标高度以上，并在该高度稳定保持 3 秒钟。</li>
+            <li>During these 3 seconds, the cylinder’s tilt angle must not exceed 5°. | 在这 3 秒内，圆柱体的倾斜角度不得超过 5°。</li>
+            <li>Under the three different conditions of vision, touch, and vision-touch combination, we hope you can find the optimal grasping posture with the fewest possible attempts. | 在视觉、触觉以及视触结合三种不同条件下，我们希望您尽可能用最少的尝试次数找到最佳的抓取姿势。</li>
+          </ul>
+          <br>
+          <h3>Virtual Environment Elements | 虚拟环境元素</h3>
+          <p>In our Unity virtual environment, there are the following elements: | 在我们的 Unity 虚拟环境中，包含以下元素：</p>
+          <img src="Unity场景.jpg" alt="Environment overview">
+          <br>
+          <ul>
+            <li>Target Object — A cylinder with an offset center of mass. | 目标物体 —— 一个重心偏移的圆柱体。</li>
+            <p>The weight of the cylinder is fixed, but its center of mass will be adjusted to make it tilt in different directions. | 实验中，圆柱体重量固定，但其重心会根据实验条件调整，从而使其向不同方向倾倒。</p>
+            <li>Finger Representations — Five small cubes with different colors. | 手指代表 —— 五个颜色各不相同的小立方体。</li>
+            <p>The five cubes of different colors correspond to the positions from the thumb to the little finger. Their relative positions are fixed, but they rotate around the center based on Hand Tracking data to simulate palm rotation and adjust the gripping posture. | 五个不同颜色的小立方体分别对应从大拇指到小拇指的位置。它们之间的相对位置固定，但会根据 Hand Tracking 数据绕中心旋转，以模拟手掌的旋转姿态，从而调整抓取方式。</p>
+            <li>Lock Area — A semi-transparent light blue cube-shaped zone. | 锁定区域 —— 一个半透明浅蓝色的立方体区域。</li>
+            <p>Within this area, the cylinder can only move vertically up and down without rotating; once it leaves the area, it will start to rotate due to the offset center of mass. | 在该区域内，圆柱体只能进行竖直上下的移动，不会发生旋转；一旦离开该区域，就会因重心偏移而开始旋转。</p>
+            <li>Target Height — A pass-through black-and-white checkered area resembling a finish line. | 目标高度 —— 类似终点线的可穿越黑白格区域。</li>
+            <p>Above this plane, if the cylinder can be held stably with only a small tilt for 3 seconds, the current grasp is considered successful. | 在该平面以上，如果能够稳定保持圆柱体且倾斜角度较小，并持续 3 秒钟，即可成功完成当前抓取。</p>
+            <li>Environment Components — Including a table and a counter. | 环境组件 —— 包括桌面与计数器。</li>
+            <p>The counter displays the current mode, the current center of mass index, and the current attempt number. | 计数器会显示当前所处的模式、当前的重心编号，以及当前的尝试次数。</p>
+          </ul>
+        `
+      },
+
+      /* ---------- Page 2 ---------- */
+      {
+        title: 'Page 2 — Hardware | 页面 2 — 硬件',
+        html: `
+          <h3>Our hardware devices include: | 我们的硬件设备包括：</h3>
+          <ul>
+            <li><b>VR Headset — Meta Quest 3</b> | <b>VR 头显 —— Meta Quest 3</b></li>
+            <p>Tracks hand movements in real time. | 可实时追踪手部动作。</p>
+            <img src="Quest3头显.jpg" alt="Quest3Headset">
+            <br>
+            <li><b>Fingertip Sliding Simulation Device</b> | <b>指尖滑动模拟设备</b></li>
+            <p>The fingertip devices are connected by elastic cords, with each of the five devices corresponding to one finger. | 指尖设备通过弹力绳相互连接，五个装置分别对应五个手指。</p>
+            <p>They use belts 3D-printed with TPU elastic material, combined with screws and nuts, allowing the tightness to be adjusted according to the thickness of each finger. | 它们使用 TPU 弹性材料 3D 打印的绑带，并配合螺丝与螺母，可根据不同手指的粗细自由调节松紧。</p>
+            <p>We will detect which finger the cylinder slips against the most, and then translate that slip into the rolling of the fingertip wheel. | 我们会检测圆柱体相对于每个手指的滑动程度，并将对应的滑动转换为指尖滚轮的滚动效果。</p>
+            <p>You will be able to experience this haptic feedback in the later trials. | 您将在后续的尝试中体验到这种触觉反馈。</p>
+            <div style="display:flex; gap:1rem; justify-content:center; margin:1rem 0;">
+              <img src="硬件设备.jpg" alt="Hardware Device" style="width:45%; border-radius:10px;">
+              <img src="手指佩戴.jpg" alt="Finger Wearing" style="width:45%; border-radius:10px;">
+            </div>
+            <video width="80%" controls style="display:block; margin:1rem auto; border-radius:10px;">
+              <source src="指尖设备.mp4" type="video/mp4">
+            </video>
+            <br>
+            <li><b>XBOX Adaptive Controller</b> | <b>XBOX 自适应控制器</b></li>
+            <p>It is used as a physical button, and pressing it switches to the next center of mass. | 它作为物理按钮使用，按下后即可切换到下一个重心。</p>
+            <img src="控制器.jpg" alt="XAC">
+          </ul>
+        `
+      },
+
+      /* ---------- Page 3 ---------- */
+      {
+        title: 'Page 3 · Simple Grasping Tutorial | 第三页 · 简单抓取教学',
+        html: `
+          <p>When the experiment officially begins, you should be in the state shown in the figure: wearing the headset, with your left hand on the button and your right hand relaxed in the air. | 当实验正式开始后，您应处于如下图所示的状态：佩戴好头显，左手放在按钮上，右手自然放松地悬空。</p>
+          <p style="color:#ff5555;"><b>Note: Please always keep your palm facing down, with your fingers naturally hanging down. | 注意：请始终保持掌心向下，五指自然下垂。</b></p>
+          <img src="如何开始.jpg" alt="How to Start">
+          <p>Rotating your hand will make the five cubes change position with slight delay. | 旋转您的手部，五个小方块会随着手部旋转逐渐改变位置（稍有延迟）。</p>
+          <video controls><source src="比较.mp4" type="video/mp4"></video>
+          <p>Closing fingers makes the cubes close (grasp). | 合拢手指时，小方块会闭合（模拟抓取）。</p>
+          <p>After grasping, slowly move your right hand up/down to lift. | 抓住后，慢慢上下移动右手抬起圆柱体。</p>
+          <video controls><source src="抓取和上下移动.mp4" type="video/mp4"></video>
+        `
+      },
+
+      /* ---------- Page 4 ---------- */
+      {
+        title: 'Page 4 — Trial Experience | 第四页 · 体验',
+        html: `
+          <p>Wearing demonstration: | 佩戴方式演示：</p>
+          <video controls><source src="头显佩戴方式_长.mp4" type="video/mp4"></video>
+          <h3>Now, please put on the VR device and adjust it until comfortable. | 现在，请戴上 VR 设备并调整到舒适。</h3>
+          <img src="quest 3.png" alt="Quest 3 Trial">
+          <br>
+          <h1><b>⚠ If you have any questions during the experiment, please ask the experimenter.⚠</b></h1>
+          <h1><b>⚠如果在实验过程中有任何问题，请及时向实验人员咨询。⚠</b></h1>
+        `
+      },
+
+      /* ---------- Page 5 ---------- */
+      {
+        title: 'Page 5 — Outcome & Attempts | 第五页 · 结果与次数',
+        html: `
+          <p>Leaving the blue lock area → cylinder tilts/slips; adjust via feedback. | 离开蓝色锁定区后会倾斜滑动，请依据反馈调整。</p>
+          <p>Goal: lift above the checkered plane and hold 3s; rotate to find optimal posture. | 目标：提到黑白平面以上保持 3 秒，并旋转寻找最优姿势。</p>
+          <p>Success: sound + green label “Well Done! Next CoM! Press the button”. | 成功：提示音 + 绿色标签。</p>
+          <video controls><source src="成功抓取.mp4" type="video/mp4"></video>
+          <br>
+          <p>Fail (tilt too large): sound + red label “Still slipping! Try again”. | 倾斜过大：失败音 + 红色标签。</p>
+          <video controls><source src="失败尝试.mp4" type="video/mp4"></video>
+          <br>
+          <p>Each CoM has up to 5 attempts; lifting counts as an attempt; if used up, yellow label and auto switch in 3s. | 每个重心最多 5 次；抬起才计次；用尽将黄标提示并 3 秒后自动切换。</p>
+          <video controls><source src="次数用尽.mp4" type="video/mp4"></video>
+        `
+      },
+
+      /* ---------- Page 6 ---------- */
+      {
+        title: 'Page 6 — Trial Experience | 第六页 · 体验',
+        html: `
+          <h3>Now, please put on the VR device | 现在，请戴上 VR 设备。</h3>
+          <img src="quest 3.png" alt="Quest 3 Trial">
+          <br>
+          <h1><b>⚠ If you have any questions during the experiment, please ask the experimenter.⚠</b></h1>
+          <h1><b>⚠如果在实验过程中有任何问题，请及时向实验人员咨询。⚠</b></h1>
+        `
+      },
+
+      /* ---------- Page 7 ---------- */
+      {
+        title: 'Page 7 · Instruction for Different Modes | 第七页 · 不同模式教学',
+        html: `
+          <br>
+          <h1><b>⚠ Please make sure to find the finger cube position that keeps the cylinder less tilted, with as few attempts as possible!!!⚠</b></h1>
+          <h1><b>⚠请一定尝试在尽量少的次数里，找到让圆柱体倾斜不那么厉害的方块位置!!!⚠</b></h1>
+          <br>
+          <h3><b>Vision Mode | 视觉模式</b></h3>
+          <p>You can see the tilt direction of the cylinder, but there is no haptic feedback. | 您能够看到圆柱体的倾斜方向，但无法获得触觉反馈。</p>
+          <br>
+          <h3><b>Haptic Mode | 触觉模式</b></h3>
+          <p>You cannot see the exact tilt of the cylinder, but you can feel the rolling of the wheel on the finger with the greatest slip in the fingertip device. | 您无法看到圆柱体的具体倾斜，但能在佩戴的指尖设备中感受到倾斜和滑动最大的手指所对应的滚轮滚动。</p>
+          <p>The cylinder will disappear after leaving the lock area. | 圆柱体会在离开锁定区域后消失。</p>
+          <br>
+          <h3><b>Vision + Haptic | 视触结合</b></h3>
+          <p>You can both see the tilt direction of the cylinder and feel the haptic feedback from the fingertip device, helping you better judge and adjust your grasping posture. | 您既能看到圆柱体的倾斜方向，又能通过指尖设备获得触觉反馈，从而更好地判断和调整抓取姿势。</p>
+          <br>
+        `
+      },
+
+      /* ---------- Page 8 ---------- */
+      {
+        title: 'Page 8 — Trial Experience | 第八页 · 体验',
+        html: `
+          <h3>Now, please put on the VR device | 现在，请戴上 VR 设备。</h3>
+          <img src="quest 3.png" alt="Quest 3 Trial">
+          <br>
+          <h1><b>⚠ If you have any questions during the experiment, please ask the experimenter.⚠</b></h1>
+          <h1><b>⚠如果在实验过程中有任何问题，请及时向实验人员咨询。⚠</b></h1>
+        `
+      },
+
+      /* ---------- Page 9 ---------- */
+      {
+        title: 'Page 9 — Formal Experiment | 第九页 · 正式实验',
+        html: `
+          <p>The long introduction and tutorial are finally over! 🎉🥳👏 Now, let’s begin the formal experiment! | 冗长的介绍与教学终于结束啦！🎉🥳👏 现在请开始正式实验吧！</p>
+        `
+      }
+    ];
+
+    const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
+    const el = id => document.getElementById(id);
+
+    function getStepFromHash(){
+      const m = location.hash.match(/step=(\d+)/);
+      const n = m ? parseInt(m[1],10) : 0;
+      return clamp(n, 0, PAGES.length-1);
+    }
+    function setStep(step){
+      const s = clamp(step, 0, PAGES.length-1);
+      if (getStepFromHash() !== s) location.hash = `#step=${s}`;
+      else render();
+    }
+    function render(){
+      try {
+        const step = getStepFromHash();
+        const page = PAGES[step];
+        if (!page) throw new Error('Page not found');
+        el('sectionTitle').textContent = page.title;
+        el('text').innerHTML = page.html;
+        el('stepLabel').textContent = `Step ${step+1}/${PAGES.length}`;
+        el('progressFill').style.width = `${((step+1)/PAGES.length)*100}%`;
+        document.getElementById('backBtn').disabled = step===0;
+        document.getElementById('nextBtn').textContent = step===PAGES.length-1 ? 'Finish' : 'Next';
+        document.title = `Instructions — ${page.title}`;
+      } catch (e) {
+        console.error(e);
+        const t = el('text');
+        if (t) t.innerHTML = `<div class="error"><b>Render error:</b> ${e.message}</div>`;
+      }
+    }
+
+    (function init(){
+      document.getElementById('year').textContent = new Date().getFullYear();
+      document.getElementById('backBtn').addEventListener('click',()=>setStep(getStepFromHash()-1));
+      document.getElementById('nextBtn').addEventListener('click',()=>setStep(getStepFromHash()+1));
+      window.addEventListener('keydown',(e)=>{
+        if(e.key==='ArrowLeft') setStep(getStepFromHash()-1);
+        if(e.key==='ArrowRight') setStep(getStepFromHash()+1);
+      });
+      window.addEventListener('hashchange',render);
+      if (!location.hash.match(/step=\d+/)) location.hash = '#step=0';
+      render();
+    })();
+  </script>
+</body>
+</html>

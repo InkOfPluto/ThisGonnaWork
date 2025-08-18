@@ -38,7 +38,6 @@ public class Grasp_HandTracking : MonoBehaviour
     [Header("延迟开启时间")]
     public float Delay = 1f;
 
-    // ★ 新增：最大尝试数（达到后阻止下一次正常抓取流程）
     [Header("尝试上限 | Attempt Limit")]
     public int attemptLimit = 5;
     #endregion
@@ -60,7 +59,6 @@ public class Grasp_HandTracking : MonoBehaviour
     #endregion
 
     #region 私有变量与新增引用
-    // 组件
     private PincherController pincherController;
 
     [Header("Attempt 计数控制")]
@@ -71,41 +69,31 @@ public class Grasp_HandTracking : MonoBehaviour
     private bool rotationEnabled = true;
     private GripState prevGripState = GripState.Fixed;
 
-    // 计数武装态 & 桌面接触状态
     private bool closeArmed = false;
     private bool cylinderOnTable = false;
 
-    // 防误松 boost
     private bool boostActive = false;
 
-    // 阈值内外状态
     private bool prevCylinderInThreshold = false;
 
     private float normalizedCache = 0f;
 
-    // ★ 超出尝试 UI/音频/渲染器控制
     [Header("OutOfAttempt 资源 | UI & Audio")]
-    [Tooltip("超出尝试时显示的 UI 文本/图片容器")]
-    public GameObject outOfAttemptUI;          // 赋值：你的“OutOfAttempt”UI 物体
-    [Tooltip("播放超出尝试提示音的 AudioSource")]
-    public AudioSource audioSource;            // 赋值：一个 AudioSource
-    [Tooltip("超出尝试时播放的语音剪辑")]
-    public AudioClip outOfAttemptVoice;        // 赋值：OutOfAttemptVoice
+    public GameObject outOfAttemptUI;
+    public AudioSource audioSource;
+    public AudioClip outOfAttemptVoice;
 
     [Header("需要统一显隐的渲染器（圆柱体+五个Cube）")]
-    public Renderer[] renderersToToggle;       // 赋值：圆柱体+五个手指的 Renderer
+    public Renderer[] renderersToToggle; // 仍然拖 Renderer，但我们会拿它的 gameObject
 
     [Header("CoM 控制器（用于切换质心）")]
-    public CenterOfMassController comController;  // 赋值：场景里的 CenterOfMassController
+    public CenterOfMassController comController;
 
-    // 防止重复触发
     private bool outOfAttemptRoutineRunning = false;
 
-    // ★ 新增：与 ThresholdReopener 的联动
     [Header("ThresholdReopener Hook")]
     public ThresholdReopener thresholdReopener;
 
-    // 达到上限后等待 OnCylinderLow 再触发的武装标志
     [SerializeField, ReadOnly]
     private bool outOfAttemptArmed = false;
     #endregion
@@ -118,6 +106,9 @@ public class Grasp_HandTracking : MonoBehaviour
 
         if (thresholdReopener != null)
             thresholdReopener.OnCylinderLow += HandleCylinderLowForOutOfAttempt;
+
+        if (comController != null)
+            comController.COMApplied += HandleCOMAppliedAfterOutOfAttempt;
     }
 
     void OnDisable()
@@ -127,6 +118,9 @@ public class Grasp_HandTracking : MonoBehaviour
 
         if (thresholdReopener != null)
             thresholdReopener.OnCylinderLow -= HandleCylinderLowForOutOfAttempt;
+
+        if (comController != null)
+            comController.COMApplied -= HandleCOMAppliedAfterOutOfAttempt;
     }
 
     void Start()
@@ -220,18 +214,15 @@ public class Grasp_HandTracking : MonoBehaviour
     {
         var currentState = pincherController.gripState;
 
-        // —— Closing 边沿 —— //
         if (currentState == GripState.Closing && prevGripState != GripState.Closing)
         {
-            // 已达到上限：此处不触发协程，仅阻止正常抓取流程，并武装等待 OnCylinderLow
             if (attempt >= attemptLimit)
             {
-                outOfAttemptArmed = true;           // 标记等待 OnCylinderLow
-                prevGripState = currentState;       // 更新前态，避免重复触发
-                return;                              // 不进入闭合模式
+                outOfAttemptArmed = true;
+                prevGripState = currentState;
+                return;
             }
 
-            // 正常流程：进入武装态，等待离桌计数
             if (attemptCountingEnabled)
             {
                 closeArmed = true;
@@ -239,12 +230,11 @@ public class Grasp_HandTracking : MonoBehaviour
             hasClosed = true;
             SwitchToClosedMode();
         }
-        // —— Opening 边沿 —— //
         else if (currentState == GripState.Opening && prevGripState != GripState.Opening)
         {
             hasClosed = false;
-            boostActive = false; // 真正张开后，关闭防误松
-            closeArmed = false;  // 解除武装
+            boostActive = false;
+            closeArmed = false;
             SwitchToOpenMode();
         }
 
@@ -257,7 +247,6 @@ public class Grasp_HandTracking : MonoBehaviour
     {
         bool nowInThreshold = IsCylinderInThreshold();
 
-        // 内 -> 外：离开 Threshold，若已抓住过物体，则开启防误松
         if (prevCylinderInThreshold && !nowInThreshold)
         {
             if (hasClosed && enableOpeningBoost)
@@ -266,7 +255,6 @@ public class Grasp_HandTracking : MonoBehaviour
             }
         }
 
-        // 外 -> 内：回到 Threshold，关闭防误松
         if (!prevCylinderInThreshold && nowInThreshold)
         {
             boostActive = false;
@@ -371,37 +359,33 @@ public class Grasp_HandTracking : MonoBehaviour
     private void HandleCylinderTouchTable()
     {
         cylinderOnTable = true;
-        boostActive = false; // 放回桌面 → 不需要防误松
+        boostActive = false;
     }
 
     private void HandleCylinderLeaveTable()
     {
         cylinderOnTable = false;
 
-        // 正常计数逻辑：合拢后离桌才 +1
         if (attemptCountingEnabled && closeArmed)
         {
             attempt++;
             closeArmed = false;
 
-            // 刚好达到上限时，武装等待 OnCylinderLow
             if (attempt == attemptLimit)
             {
                 outOfAttemptArmed = true;
-                // Debug.Log("[Grasp_HandTracking] Attempt reached limit; armed for OnCylinderLow.");
             }
         }
     }
     #endregion
 
-    #region OutOfAttempt：通过 OnCylinderLow 触发（★修改后）
-    // 收到 ThresholdReopener 的 OnCylinderLow 才真正触发超限流程
+    #region OutOfAttempt：通过 OnCylinderLow 触发
     private void HandleCylinderLowForOutOfAttempt()
     {
         if (!outOfAttemptArmed) return;
         if (outOfAttemptRoutineRunning) return;
 
-        outOfAttemptArmed = false; // 解除武装
+        outOfAttemptArmed = false;
         TryTriggerOutOfAttempt();
     }
 
@@ -415,64 +399,56 @@ public class Grasp_HandTracking : MonoBehaviour
     {
         outOfAttemptRoutineRunning = true;
 
-        // 1) 暂停 attempt 计数，防止 3~5 秒内发生额外事件
         StopAttemptCounting();
 
-        // 2) 显示 UI
         if (outOfAttemptUI) outOfAttemptUI.SetActive(true);
 
-        // 3) 播放音频
         if (audioSource)
         {
             if (outOfAttemptVoice)
-            {
                 audioSource.PlayOneShot(outOfAttemptVoice);
-            }
             else
-            {
-                audioSource.Play(); // 若已在 AudioSource 里设置好 clip
-            }
+                audioSource.Play();
         }
 
-        // 4) 隐藏渲染器（圆柱体 + 五个 Cube）
-        ToggleRenderers(false);
+        ToggleObjects(false); // 🚀 彻底关闭 Cube 和 Cylinder
 
-        // 5) 等待 3 秒
-        yield return new WaitForSeconds(3f);
-
-        // 6) 关闭 UI
-        if (outOfAttemptUI) outOfAttemptUI.SetActive(false);
-
-        // 7) 恢复渲染器
-        ToggleRenderers(true);
-
-        // 8) 切换到下一个 CoM（不循环）
         if (comController != null)
         {
-            bool changed = comController.RequestNextCOM_NoLoop();
-            if (!changed)
-            {
-                Debug.Log("[Grasp_HandTracking] 已到最后一个 COM，CenterOfMassController 会进入 ChangingMode。");
-            }
+            Debug.Log("[Grasp_HandTracking] 已达到尝试上限，请按 G 或 Space 键手动切换到下一个 COM。");
         }
         else
         {
-            Debug.LogWarning("[Grasp_HandTracking] 未绑定 CenterOfMassController，无法切换 COM。");
+            Debug.LogWarning("[Grasp_HandTracking] 未绑定 CenterOfMassController，无法手动切换 COM。");
         }
 
-        // 9) 恢复 attempt 计数（CenterOfMassController 应已重置 attempt = 0）
-        ResumeAttemptCounting();
-
         outOfAttemptRoutineRunning = false;
+        yield break;
     }
 
-    private void ToggleRenderers(bool enabled)
+    private void ToggleObjects(bool enabled)
     {
         if (renderersToToggle == null) return;
         foreach (var r in renderersToToggle)
         {
-            if (r) r.enabled = enabled;
+            if (r != null && r.gameObject != null)
+            {
+                r.gameObject.SetActive(enabled);
+            }
         }
+    }
+    #endregion
+
+    #region 恢复逻辑（手动切换 CoM 后）
+    private void HandleCOMAppliedAfterOutOfAttempt(int index)
+    {
+        if (outOfAttemptUI && outOfAttemptUI.activeSelf)
+            outOfAttemptUI.SetActive(false);
+
+        ToggleObjects(true);   // 🚀 切换 COM 时恢复 Cube 和 Cylinder
+        ResumeAttemptCounting();
+
+        Debug.Log($"[Grasp_HandTracking] 已切换到 COM_{index}，UI 已关闭，对象已恢复，计数已恢复。");
     }
     #endregion
 
@@ -483,7 +459,7 @@ public class Grasp_HandTracking : MonoBehaviour
         hasClosed = false;
         closeArmed = false;
         boostActive = false;
-        outOfAttemptArmed = false;   // 清理武装标志
+        outOfAttemptArmed = false;
         SwitchToOpenMode();
     }
 

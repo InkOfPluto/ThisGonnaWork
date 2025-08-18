@@ -136,12 +136,12 @@ public class CenterOfMassController : MonoBehaviour
             if (!_cycleCompleted)
             {
                 // —— 将按键逻辑统一走公共入口 —— //
-                if (!_isPressed && (Input.GetKeyDown(KeyCode.JoystickButton1) || Input.GetKeyDown(KeyCode.G)))
+                if (!_isPressed && (Input.GetKeyDown(KeyCode.JoystickButton1) || Input.GetKeyDown(KeyCode.Space)))
                 {
                     _isPressed = true;
                     RequestNextCOM_NoLoop(); // <—— 统一入口：外部脚本也可直接调用这个方法
                 }
-                if (_isPressed && (Input.GetKeyUp(KeyCode.JoystickButton1) || Input.GetKeyUp(KeyCode.G)))
+                if (_isPressed && (Input.GetKeyUp(KeyCode.JoystickButton1) || Input.GetKeyUp(KeyCode.Space)))
                 {
                     _isPressed = false;
                 }
