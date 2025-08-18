@@ -36,10 +36,10 @@ public class CenterOfMassController : MonoBehaviour
 
         // 编号 1-5：使用 distanceGroup1
         new COMDistanceAngle(0f, 180.0f),  // 1
-        new COMDistanceAngle(0f, 12.0f),   // 2
+        new COMDistanceAngle(0f, 240.0f),   // 2
         new COMDistanceAngle(0f, 222.0f),  // 3
         new COMDistanceAngle(0f, 308.0f),  // 4
-        new COMDistanceAngle(0f, 351.0f),  // 5
+        new COMDistanceAngle(0f, 245.0f),  // 5
 
         // 编号 6-10：使用 distanceGroup2
         new COMDistanceAngle(0f, 8.0f),    // 6
@@ -49,10 +49,10 @@ public class CenterOfMassController : MonoBehaviour
         new COMDistanceAngle(0f, 333.0f),  // 10
 
         // 编号 11-15：使用 distanceGroup3
-        new COMDistanceAngle(0f, 15.0f),   // 11
-        new COMDistanceAngle(0f, 150.0f),  // 12
+        new COMDistanceAngle(0f, 285.0f),   // 11
+        new COMDistanceAngle(0f, 300.0f),  // 12
         new COMDistanceAngle(0f, 210.0f),  // 13
-        new COMDistanceAngle(0f, 297.0f),  // 14
+        new COMDistanceAngle(0f, 256.0f),  // 14
         new COMDistanceAngle(0f, 354.0f),  // 15
     };
 

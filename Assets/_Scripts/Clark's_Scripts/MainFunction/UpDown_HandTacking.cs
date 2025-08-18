@@ -4,8 +4,7 @@ using UnityEngine;
 
 /// <summary>
 /// 最终版 WristController，加入 Deadzone + Snap 抑制 hand 抖动。
-/// 启动时，将 5 个手指 Cube 高度与圆柱体中心对齐；
-/// 提供“同步锁定模式”在运行时保持一致高度。
+/// 启动时，将 5 个手指 Cube 高度与圆柱体中心对齐。
 /// </summary>
 public class UpDown_HandTracking : MonoBehaviour
 {
@@ -28,11 +27,6 @@ public class UpDown_HandTracking : MonoBehaviour
     [Header("Hand Y Clamp")]
     public float minY = 0.8f;
     public float maxY = 1.2f;
-
-    [Header("Lock Sync (Fingers ↔ Cylinder)")]
-    public bool lockSync = false;           // 是否开启运行时同步
-    [Tooltip("=0: 立刻对齐；>0: 以该速度插值对齐")]
-    public float lockSyncSpeed = 0f;        // 同步平滑速度（0 为瞬间对齐）
 
     void Start()
     {
@@ -74,7 +68,7 @@ public class UpDown_HandTracking : MonoBehaviour
 
         if (Mathf.Abs(diffY) > handDeadZone)
         {
-            // 这里保留你的平滑滤波逻辑
+            // 平滑滤波逻辑
             handPos.y = Mathf.Lerp(handPos.y, targetY, handMoveSpeed * Time.deltaTime);
             hand.transform.position = handPos;
         }
@@ -85,12 +79,6 @@ public class UpDown_HandTracking : MonoBehaviour
             hand.transform.position = handPos;
         }
         // 否则不动，避免抖动
-
-        // —— 同步锁定模式：让手指在运行时保持与 Cylinder 同高 ——
-        if (lockSync)
-        {
-            SyncFingersToCylinder(lockSyncSpeed);
-        }
 
         previousY = currentY;
     }
@@ -125,35 +113,6 @@ public class UpDown_HandTracking : MonoBehaviour
             if (f == null) continue;
             Vector3 pos = f.transform.position;
             pos.y = centerY;
-            f.transform.position = pos;
-        }
-    }
-
-    /// <summary>
-    /// 运行时同步：speed == 0 则瞬间对齐；否则用 Lerp 插值
-    /// </summary>
-    private void SyncFingersToCylinder(float speed)
-    {
-        if (cylinder == null || fingers == null || fingers.Length == 0) return;
-
-        float centerY = cylinder.transform.position.y;
-
-        for (int i = 0; i < fingers.Length; i++)
-        {
-            GameObject f = fingers[i];
-            if (f == null) continue;
-
-            Vector3 pos = f.transform.position;
-
-            if (speed <= 0f)
-            {
-                pos.y = centerY; // 立刻对齐
-            }
-            else
-            {
-                pos.y = Mathf.Lerp(pos.y, centerY, speed * Time.deltaTime); // 平滑跟随
-            }
-
             f.transform.position = pos;
         }
     }
