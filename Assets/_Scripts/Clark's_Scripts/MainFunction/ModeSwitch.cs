@@ -46,6 +46,9 @@ public class ModeSwitch : MonoBehaviour
     // NEW：避免重复日志
     private bool hapticVisibilityRefsWarned = false;
 
+    private float showDelay = 0.2f; // 200 毫秒
+    private float enterTime = -1f;  // 记录进入阈值的时间
+
     private void Start()
     {
 
@@ -188,11 +191,28 @@ public class ModeSwitch : MonoBehaviour
             return;
         }
 
-        // 判断是否“在阈值区内”：用包围盒相交作为稳定近似（足够满足‘离开/回到’判断）
         bool inside = thresholdCollider.bounds.Intersects(cylinderCollider.bounds);
 
-        // 在 Haptic 模式下：离开则隐藏，回到则显示
-        cylinderRenderer.enabled = inside;
+        if (inside)
+        {
+            // 第一次进入时，记录时间
+            if (enterTime < 0f)
+            {
+                enterTime = Time.time;
+            }
+
+            // 如果进入超过 200ms，就显示
+            if (Time.time - enterTime >= showDelay)
+            {
+                cylinderRenderer.enabled = true;
+            }
+        }
+        else
+        {
+            // 离开就立即隐藏
+            cylinderRenderer.enabled = false;
+            enterTime = -1f; // 重置计时
+        }
     }
 
 #if UNITY_EDITOR

@@ -48,6 +48,7 @@ public class GoalTriggerController : MonoBehaviour
     public Grasp_HandTracking graspHandTracking;
 
     [Header("调试信息 | Debug Info")]
+    [ReadOnly] public float cylinderTiltAngle = 0f;
     [ReadOnly] public bool isGoalVisible = true;
     [ReadOnly] public bool isCylinderInside = false;
     [ReadOnly] public bool hasCylinderPassedThrough = false;
@@ -126,6 +127,17 @@ public class GoalTriggerController : MonoBehaviour
         if (cylinderObject != null && isGoalVisible && !hasTriggered)
         {
             CheckCylinderStatus();
+        }
+
+
+        // 👉 更新圆柱体倾角（相对于世界竖直向上）
+        if (cylinderObject != null)
+        {
+            cylinderTiltAngle = Vector3.Angle(cylinderObject.transform.up, Vector3.up);
+        }
+        else
+        {
+            cylinderTiltAngle = 0f;
         }
     }
 

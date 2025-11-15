@@ -86,6 +86,9 @@ public class UnifiedDataLogger : MonoBehaviour
         public List<int> attempt_index = new();
         public List<float> attempt_enter_time = new();
 
+        // Cylinder 倾角（相对世界竖直，单位：度）
+        public List<float> Cylinder_tilt_angle = new();
+
         public List<string> grasp_state = new();
         // ★ 新增：每帧记录“最近一次 grasp_state 发生变化”的时间戳
         public List<float> grasp_state_change_time = new();
@@ -447,6 +450,11 @@ public class UnifiedDataLogger : MonoBehaviour
         );
         float h = (cylinder != null) ? (cylinder.position.y - 0.75f) : 0f;
         D.Cylinder_height_from_init.Add(h);
+
+        // ★ 新增：Cylinder 倾角（相对世界竖直方向）
+        // 0° 表示完全竖直向上，数值越大表示倾斜越明显
+        float tiltDeg = (cylinder != null) ? Vector3.Angle(cylinder.up, Vector3.up) : 0f;
+        D.Cylinder_tilt_angle.Add(tiltDeg);
 
         // CubeCenter（世界位姿 & 相对 cylinder）——按 GameObject.activeInHierarchy
         PushObjStateGO(

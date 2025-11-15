@@ -20,9 +20,9 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Black
+  m_Name: 3MiddleCube
   m_Shader: {fileID: 4800000, guid: 933532a4fcc9baf4fa0491de14d08ed7, type: 3}
-  m_Parent: {fileID: 2100000, guid: 68bb00941c3df8a4daf97c3e319ecc8c, type: 2}
+  m_Parent: {fileID: 2100000, guid: 987e23bd1b7db0e40a3b77e885f46e01, type: 2}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
   m_InvalidKeywords: []
@@ -36,19 +36,10 @@ Material:
   m_LockedProperties: 
   m_SavedProperties:
     serializedVersion: 3
-    m_TexEnvs:
-    - _BaseMap:
-        m_Texture: {fileID: 2800000, guid: 83e74b2525ef7a8489125ec1582fda6e, type: 3}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    - _MainTex:
-        m_Texture: {fileID: 2800000, guid: 83e74b2525ef7a8489125ec1582fda6e, type: 3}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
+    m_TexEnvs: []
     m_Ints: []
-    m_Floats:
-    - _Metallic: 0.493
+    m_Floats: []
     m_Colors:
-    - _BaseColor: {r: 0, g: 0, b: 0, a: 0.36078432}
-    - _Color: {r: 0, g: 0, b: 0, a: 0.36078432}
+    - _BaseColor: {r: 1, g: 0.82593906, b: 0.3726415, a: 0.36078432}
+    - _Color: {r: 1, g: 0.82593906, b: 0.37264147, a: 0.36078432}
   m_BuildTextureStacks: []
